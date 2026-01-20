@@ -1,26 +1,66 @@
+
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  /* This is where we define your KTXZ brand colors in v4 */
+  --color-ktx-red: #ff0000;
+  --ktx-red-glow: rgba(255, 0, 0, 0.2);
+
+  /* If you want to customize your red shades further */
+  --color-ktx-red-dark: #cc0000;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* Base styles in v4 use standard CSS selectors */
+@layer base {
+  body {
+    background-color: black;
+    color: white;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Custom UI Components for the "KTXZ Look" */
+@layer components {
+  .btn-primary {
+    @apply bg-white text-black font-black py-3 px-6 rounded-xl transition-all uppercase text-xs tracking-widest shadow-lg active:scale-95;
+  }
+
+  .btn-primary:hover {
+    @apply bg-[var(--color-ktx-red)] text-white;
+  }
+
+  .input-field {
+    @apply bg-black border border-gray-800 p-4 rounded-xl outline-none transition-all text-sm placeholder:text-gray-600;
+  }
+
+  .input-field:focus {
+    @apply border-[var(--color-ktx-red)];
+  }
+
+  .card-glass {
+    @apply bg-gray-900/20 border border-gray-800 backdrop-blur-md rounded-3xl p-6 transition-colors;
+  }
+
+  .card-glass:hover {
+    @apply border-[var(--color-ktx-red)];
+  }
+
+    @layer components {
+  
+      /* STYLE: WHITE BASE / BLACK TEXT (High Visibility) */
+      .btn-white {
+        @apply bg-white text-black font-black py-3 px-6 rounded-xl transition-all duration-200 uppercase text-xs tracking-widest hover:bg-ktx-red hover:text-white active:scale-95 shadow-lg;
+      }
+  
+      /* STYLE: BLACK BASE / WHITE TEXT (Stealth/Secondary) */
+      .btn-black {
+        @apply bg-black border border-gray-800 text-white font-bold py-3 px-6 rounded-xl transition-all duration-200 uppercase text-xs tracking-widest hover:border-ktx-red hover:shadow-[0_0_15px_rgba(255, 0, 0, 0.2)];
+      }
+  
+      /* STYLE: GHOST / OUTLINE (Minimalist) */
+      .btn-ghost {
+        @apply bg-transparent border border-gray-900 text-gray-500 py-2 px-4 rounded-lg text-[10px] font-bold uppercase tracking-tighter hover:text-white hover:border-gray-700;
+      }
+    }
 }
