@@ -1,98 +1,201 @@
-import { createCard, createBrand } from "./actions"; 
+import { createCard, createBrand, updateVaultStatus } from "./actions";
 import dbConnect from "@/lib/dbConnect";
 import Brand from "@/models/Brand";
+import Card from "@/models/Card";
+
+// Helper to format MongoDB dates for HTML datetime-local inputs
+const formatDateForInput = (date?: Date) => {
+  if (!date) return "";
+  const d = new Date(date);
+  return new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+};
 
 export default async function AdminPage() {
   await dbConnect();
   
-  // We use .lean() for speed and convert to plain objects
-  const brands = await Brand.find({}).lean();
+  // Fetch data for the UI
+  const brands = await Brand.find({}).sort({ name: 1 });
+  const cards = await Card.find({}).populate('brand').sort({ createdAt: -1 });
 
   return (
-    <main className="min-h-screen bg-black text-white p-6 md:p-12">
-      <div className="max-w-6xl mx-auto">
-        <h1 className="text-5xl font-black mb-12 tracking-tighter italic border-b border-gray-800 pb-4">
-          COMMAND <span className="text-green-500">CENTER</span>
-        </h1>
+    <main className="min-h-screen bg-black p-8 font-sans">
+      <div className="max-w-5xl mx-auto space-y-12">
+        <header>
+          <h1 className="text-4xl font-black italic uppercase tracking-tighter text-white">
+            Command Center
+          </h1>
+          <p className="text-gray-500 font-mono text-[10px] tracking-[0.3em] uppercase mt-2">
+            Inventory & Vault Logistics
+          </p>
+        </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-          
-          {/* --- SECTION 1: BRAND MANAGEMENT --- */}
-          <section className="space-y-6">
-            <div className="border border-orange-500/20 bg-orange-500/5 p-8 rounded-3xl">
-              <h2 className="text-xl font-bold mb-6 text-orange-500 uppercase tracking-widest">
-                1. Add New Game Category
-              </h2>
-              <form action={createBrand} className="flex flex-col gap-4">
-                <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-bold text-gray-500 uppercase">Game Name</label>
-                  <input 
-                    name="name" 
-                    required 
-                    className="bg-black border border-gray-800 p-4 rounded-xl focus:border-orange-500 outline-none transition-all" 
-                    placeholder="e.g. One Piece, Lorcana..." 
-                  />
-                </div>
-                <button type="submit" className="bg-orange-600 hover:bg-orange-400 text-black font-black py-4 rounded-xl transition-all uppercase text-sm italic">
-                  Initialize Category
-                </button>
-              </form>
+        {/* 1. CATEGORY INITIALIZATION */}
+        <section className="p-8 border border-gray-900 rounded-3xl bg-gray-950/50">
+          <h2 className="text-xl font-black italic uppercase text-white mb-6">1. Add New Game Category</h2>
+          <form action={createBrand} className="flex gap-4">
+            <input 
+              name="name" 
+              required 
+              placeholder="GAME NAME (e.g. MAGIC: THE GATHERING)" 
+              className="flex-1 bg-black border border-gray-800 p-4 rounded-xl text-white outline-none focus:border-red-600 transition-all placeholder:text-gray-700" 
+            />
+            <button className="bg-white text-black px-8 font-black rounded-xl hover:bg-red-600 hover:text-white transition-all uppercase text-xs">
+              Initialize
+            </button>
+          </form>
+        </section>
+
+        {/* 2. CARD UPLOAD (Standard Inventory) */}
+        <section className="p-8 border border-gray-900 rounded-3xl bg-gray-950/50 shadow-2xl shadow-green-900/10">
+          <h2 className="text-xl font-black italic uppercase text-green-500 mb-6 font-mono">2. Upload New Card</h2>
+          <form action={createCard} className="space-y-4">
+            <input 
+              name="name" 
+              required 
+              placeholder="CARD IDENTITY" 
+              className="w-full bg-black border border-gray-800 p-4 rounded-xl text-white outline-none focus:border-green-500 transition-all placeholder:text-gray-700" 
+            />
+            
+            <div className="grid grid-cols-2 gap-4">
+              <input 
+                name="price" 
+                type="number" 
+                step="0.01" 
+                required 
+                placeholder="PRICE ($)" 
+                className="bg-black border border-gray-800 p-4 rounded-xl text-white outline-none focus:border-green-500 transition-all placeholder:text-gray-700" 
+              />
+              <input 
+                name="rarity" 
+                placeholder="RARITY (e.g. GHOST RARE)" 
+                className="bg-black border border-gray-800 p-4 rounded-xl text-white outline-none focus:border-green-500 transition-all placeholder:text-gray-700" 
+              />
             </div>
 
-            {/* Visual list of what's currently in the DB */}
-            <div className="p-4 bg-gray-900/30 rounded-2xl border border-gray-800">
-              <p className="text-[10px] text-gray-500 uppercase font-bold mb-3">Active Categories</p>
-              <div className="flex flex-wrap gap-2">
-                {brands.map((b: any) => (
-                  <span key={b._id.toString()} className="text-[10px] px-3 py-1 bg-black border border-gray-700 rounded-full font-mono">
+            <div className="relative">
+              <select 
+                name="brandId" 
+                required 
+                className="w-full bg-black border border-gray-800 p-4 rounded-xl text-white outline-none focus:border-green-500 appearance-none uppercase text-xs font-bold tracking-widest text-gray-400"
+              >
+                <option value="">Select Game Category</option>
+                {brands.map((b) => (
+                  <option key={b._id.toString()} value={b._id.toString()}>
                     {b.name}
-                  </span>
+                  </option>
                 ))}
-              </div>
+              </select>
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500 text-[10px]">▼</div>
             </div>
-          </section>
 
-          {/* --- SECTION 2: CARD INVENTORY --- */}
-          <section className="border border-green-500/20 bg-green-500/5 p-8 rounded-3xl">
-            <h2 className="text-xl font-bold mb-6 text-green-500 uppercase tracking-widest">
-              2. Upload New Card
-            </h2>
-            <form action={createCard} className="flex flex-col gap-6">
-              
-              <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-bold text-gray-500 uppercase">Card Identity</label>
-                <input name="name" required className="bg-black border border-gray-800 p-4 rounded-xl focus:border-green-500 outline-none" placeholder="e.g. Blue Eyes White Dragon" />
-              </div>
+            <input 
+              name="image" 
+              placeholder="IMAGE ASSET URL" 
+              className="w-full bg-black border border-gray-800 p-4 rounded-xl text-white outline-none focus:border-green-500 transition-all placeholder:text-gray-700" 
+            />
+            
+            <button className="w-full bg-green-600 text-white font-black py-5 rounded-2xl hover:bg-green-400 transition-all uppercase italic tracking-widest text-sm shadow-lg shadow-green-900/20">
+              Push to Live Inventory
+            </button>
+          </form>
+        </section>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-bold text-gray-500 uppercase">Price ($)</label>
-                  <input name="price" type="number" step="0.01" required className="bg-black border border-gray-800 p-4 rounded-xl focus:border-green-500 outline-none" placeholder="0.00" />
+        {/* 3. VAULT COMMAND & CONTROL (Scheduling) */}
+        <section className="p-8 border border-red-900/30 rounded-3xl bg-gray-950/50">
+          <h2 className="text-xl font-black italic uppercase text-red-600 mb-6">3. Vault Command & Control</h2>
+          <div className="space-y-4">
+            {cards.map((card) => (
+              <div 
+                key={card._id.toString()} 
+                className={`p-6 bg-black border rounded-2xl transition-all duration-300 ${
+                  card.isVault ? 'border-red-900/50 shadow-[0_0_30px_-10px_rgba(220,38,38,0.3)]' : 'border-gray-800'
+                }`}
+              >
+                {/* Card Header Info */}
+                <div className="flex items-start justify-between mb-6">
+                  <div className="flex gap-5">
+                    <img 
+                      src={card.image || "https://via.placeholder.com/150"} 
+                      alt="" 
+                      className="w-16 h-24 object-cover rounded-lg border border-gray-800" 
+                    />
+                    <div>
+                      <h3 className="font-bold text-white uppercase text-lg tracking-tight">{card.name}</h3>
+                      <p className="text-[10px] text-gray-500 font-mono uppercase tracking-wider mt-1">
+                        {card.rarity} // {card.brand?.name || "Uncategorized"}
+                      </p>
+                      <div className="mt-3">
+                        <span className={`text-[9px] font-black uppercase px-2 py-1 rounded border ${
+                          card.isVault ? 'text-red-500 border-red-900 bg-red-950/20' : 'text-gray-600 border-gray-800'
+                        }`}>
+                          {card.isVault ? '● Vault Active' : '○ Marketplace Standard'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-bold text-gray-500 uppercase">Game Category</label>
-                  <select name="brandId" className="bg-black border border-gray-800 p-4 rounded-xl focus:border-green-500 outline-none text-sm cursor-pointer">
-                    {brands.map((b: any) => (
-                      <option key={b._id.toString()} value={b._id.toString()}>
-                        {b.name.toUpperCase()}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+
+                {/* Scheduling Form */}
+                <form action={updateVaultStatus} className="bg-gray-900/20 p-4 rounded-xl border border-gray-800/50">
+                  <input type="hidden" name="cardId" value={card._id.toString()} />
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+                    
+                    {/* Date Pickers */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-[9px] text-gray-500 uppercase font-mono pl-1">Release (Start)</label>
+                        <input 
+                          type="datetime-local" 
+                          name="vaultReleaseDate"
+                          defaultValue={formatDateForInput(card.vaultReleaseDate)}
+                          className="w-full bg-black border border-gray-800 p-2 rounded-lg text-[10px] text-white focus:border-red-600 outline-none uppercase font-mono"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] text-gray-500 uppercase font-mono pl-1">Expiry (End)</label>
+                        <input 
+                          type="datetime-local" 
+                          name="vaultExpiryDate"
+                          defaultValue={formatDateForInput(card.vaultExpiryDate)}
+                          className="w-full bg-black border border-gray-800 p-2 rounded-lg text-[10px] text-white focus:border-red-600 outline-none uppercase font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Controls */}
+                    <div className="flex gap-2 justify-end">
+                      {card.isVault && (
+                        <button 
+                          type="submit" 
+                          name="actionType" 
+                          value="deactivate"
+                          className="px-4 py-3 bg-gray-900 border border-gray-800 text-gray-400 hover:bg-red-950 hover:border-red-900 hover:text-red-500 text-[10px] font-bold uppercase rounded-lg transition-all"
+                        >
+                          Deactivate
+                        </button>
+                      )}
+                      
+                      <button 
+                        type="submit" 
+                        name="actionType" 
+                        value="update"
+                        className={`px-6 py-3 text-[10px] font-black uppercase rounded-lg transition-all tracking-widest ${
+                          card.isVault 
+                            ? 'bg-white text-black hover:bg-gray-200' 
+                            : 'bg-red-600 text-white hover:bg-red-500'
+                        }`}
+                      >
+                        {card.isVault ? 'Update Schedule' : 'Activate Vault'}
+                      </button>
+                    </div>
+
+                  </div>
+                </form>
               </div>
-
-              <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-bold text-gray-500 uppercase">Image Asset URL</label>
-                <input name="image" className="bg-black border border-gray-800 p-4 rounded-xl focus:border-green-500 outline-none" placeholder="https://..." />
-              </div>
-
-              <button type="submit" className="bg-green-600 hover:bg-green-400 text-black font-black py-5 rounded-2xl transition-all uppercase tracking-widest italic shadow-lg shadow-green-900/20">
-                Push to Live Inventory
-              </button>
-            </form>
-          </section>
-
-        </div>
+            ))}
+          </div>
+        </section>
       </div>
     </main>
   );
