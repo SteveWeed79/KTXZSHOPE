@@ -1,35 +1,67 @@
-export default function FilterSidebar({ brands }: { brands: any[] }) {
+"use client";
+
+import { useRouter, useSearchParams } from "next/navigation";
+
+interface Brand {
+  _id: string;
+  name: string;
+}
+
+export default function FilterSidebar({ brands }: { brands: Brand[] }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const activeBrandId = searchParams.get("brand");
+
+  const handleFilterChange = (id: string | null) => {
+    const params = new URLSearchParams(searchParams.toString());
+    
+    if (id) {
+      params.set("brand", id);
+    } else {
+      params.delete("brand"); // Clears filter if "All" is selected
+    }
+
+    // This updates the URL without a full page refresh
+    router.push(`/shop?${params.toString()}`);
+  };
+
   return (
-    <aside className="w-64 hidden lg:flex flex-col gap-8 pr-8 border-r border-gray-900 min-h-[80vh]">
+    <div className="space-y-8 bg-gray-950/50 p-6 rounded-2xl border border-gray-900">
       <div>
-        <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500 mb-4">Refine Search</h3>
-        <div className="space-y-6">
-          
-          {/* Price Range */}
-          <div className="flex flex-col gap-3">
-            <label className="text-xs font-bold text-white">Price Range</label>
-            <div className="flex items-center gap-2">
-              <input type="number" placeholder="Min" className="w-full bg-gray-900/50 border border-gray-800 p-2 rounded-lg text-xs" />
-              <span className="text-gray-700">-</span>
-              <input type="number" placeholder="Max" className="w-full bg-gray-900/50 border border-gray-800 p-2 rounded-lg text-xs" />
-            </div>
-          </div>
-
-          {/* Game Selection */}
-          <div className="flex flex-col gap-3">
-            <label className="text-xs font-bold text-white">Category</label>
-            <div className="space-y-2">
-              {brands.map((b) => (
-                <label key={b._id} className="flex items-center gap-2 text-xs text-gray-400 hover:text-white cursor-pointer group">
-                  <input type="checkbox" className="accent-[var(--ktx-red)]" />
-                  <span className="group-hover:translate-x-1 transition-transform">{b.name}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-        </div>
+        <h3 className="text-white font-black uppercase italic text-xs tracking-[0.2em] mb-4">
+          Categories
+        </h3>
+        <ul className="space-y-2">
+          <li>
+            <button
+              onClick={() => handleFilterChange(null)}
+              className={`w-full text-left text-xs uppercase font-mono py-2 px-3 rounded-lg transition-colors ${
+                !activeBrandId ? "bg-red-600 text-white" : "text-gray-500 hover:text-white"
+              }`}
+            >
+              All Assets
+            </button>
+          </li>
+          {brands.map((brand) => (
+            <li key={brand._id}>
+              <button
+                onClick={() => handleFilterChange(brand._id)}
+                className={`w-full text-left text-xs uppercase font-mono py-2 px-3 rounded-lg transition-colors ${
+                  activeBrandId === brand._id ? "bg-red-600 text-white" : "text-gray-500 hover:text-white"
+                }`}
+              >
+                {brand.name}
+              </button>
+            </li>
+          ))}
+        </ul>
       </div>
-    </aside>
+
+      <div className="pt-4 border-t border-gray-900">
+        <p className="text-[9px] text-gray-700 uppercase font-mono leading-relaxed">
+          Select a sector to view specialized secondary market inventory.
+        </p>
+      </div>
+    </div>
   );
 }

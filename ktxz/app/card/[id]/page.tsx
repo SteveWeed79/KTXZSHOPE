@@ -29,26 +29,28 @@ export default async function CardPage({ params }: { params: Promise<{ id: strin
             )}
           </div>
 
-          {/* Info Section */}
-          <div className="flex flex-col justify-center">
-            <span className="text-green-500 font-mono tracking-widest uppercase mb-2">
-              {card.brand.name} // {card.rarity}
-            </span>
-            <h1 className="text-7xl font-black tracking-tighter mb-4">{card.name}</h1>
-            <p className="text-5xl font-mono text-white mb-8">${card.price}</p>
-            
-            <div className="p-6 border border-gray-800 rounded-2xl bg-gray-950 mb-8">
-              <h3 className="text-gray-500 uppercase text-xs font-bold mb-2">Description</h3>
-              <p className="text-gray-300">
-                This is a certified {card.rarity} collectible from the {card.brand.name} set. 
-                Stored in a smoke-free environment in a top-loader.
-              </p>
-            </div>
+{/* Info Section */}
+<div className="flex flex-col justify-center">
+  <span className="text-green-500 font-mono tracking-widest uppercase mb-2">
+    {card.brand.name} // {card.rarity}
+  </span>
+  <h1 className="text-7xl font-black tracking-tighter mb-4">{card.name}</h1>
+  <p className="text-5xl font-mono text-white mb-8">${card.price}</p>
+  
+  <div className="p-6 border border-gray-800 rounded-2xl bg-gray-950 mb-8">
+    <h3 className="text-gray-500 uppercase text-xs font-bold mb-2">Description</h3>
+    <p className="text-gray-300">
+      {/* REMOVED: The hardcoded "This is a certified..." string.
+          ADDED: Logic to show the ACTUAL description from the DB. 
+      */}
+      {card.description ? card.description : `This is a certified ${card.rarity} collectible from the ${card.brand.name} set. Stored in a smoke-free environment in a top-loader.`}
+    </p>
+  </div>
 
-            <button className="py-5 bg-green-600 hover:bg-green-500 text-white font-black text-2xl rounded-2xl transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-green-900/20">
-              ADD TO COLLECTION
-            </button>
-          </div>
+  <button className="py-5 bg-green-600 hover:bg-green-500 text-white font-black text-2xl rounded-2xl transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-green-900/20">
+    ADD TO COLLECTION
+  </button>
+</div>
         </div>
       </div>
     </div>
