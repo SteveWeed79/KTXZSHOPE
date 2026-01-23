@@ -11,21 +11,15 @@ export const authConfig = {
       const userEmail = auth?.user?.email;
 
       const isAdminPage = nextUrl.pathname.startsWith("/admin");
-      const isProfilePage = nextUrl.pathname.startsWith("/profile");
-
-      // LOGIC: Check both the role AND the hardcoded email as a backup
-      const isAdmin = userEmail === "steveweed1979@gmail.com" || userRole === "admin";
+      
+      // Determine if the current user has admin rights [cite: 54, 55]
+      const isAdmin = 
+        userRole === "admin" || 
+        (userEmail && userEmail === process.env.ADMIN_EMAIL);
 
       if (isAdminPage) {
-        if (isLoggedIn && isAdmin) return true;
-        // This is where it's failing you: if this returns false, it redirects
-        return false; 
+        return isLoggedIn && isAdmin;
       }
-
-      if (isProfilePage) {
-        return isLoggedIn;
-      }
-
       return true;
     },
   },

@@ -1,10 +1,10 @@
 import NextAuth from "next-auth";
-import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
+import Credentials from "next-auth/providers/credentials";
+import bcrypt from "bcryptjs";
 import { authConfig } from "./auth.config";
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
-import bcrypt from "bcryptjs";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -16,42 +16,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
     Credentials({
       async authorize(credentials) {
-        console.log("--- AUTH START ---");
-        if (!credentials?.email || !credentials?.password) {
-          console.log("DEBUG: Missing email or password in form");
-          return null;
-        }
-
         await dbConnect();
-        console.log("DEBUG: Database Connected");
+        const email = (credentials?.email as string)?.toLowerCase().trim();
+        const password = credentials?.password as string;
 
-        const email = (credentials.email as string).toLowerCase().trim();
-        
-        // FIX: Added .select("+password") because the schema hides it by default
+        if (!email || !password) return null;
+
+        // Fetch user and explicitly select the hidden password field [cite: 60]
         const user = await User.findOne({ email }).select("+password");
+        if (!user || !user.password) return null;
 
-        if (!user) {
-          console.log(`DEBUG: User NOT found for email: ${email}`);
-          return null;
-        }
-        console.log("DEBUG: User found in DB");
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) return null;
 
-        if (!user.password) {
-          console.log("DEBUG: User has no password (Google user?)");
-          return null;
-        }
-
-        const isMatch = await bcrypt.compare(
-          credentials.password as string,
-          user.password
-        );
-
-        if (!isMatch) {
-          console.log("DEBUG: Password MISMATCH");
-          return null;
-        }
-
-        console.log("DEBUG: Authentication SUCCESSFUL");
         return {
           id: user._id.toString(),
           email: user.email,
@@ -65,8 +42,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        // Ensure admin override for your specific email
-        token.role = user.email === "steveweed1979@gmail.com" ? "admin" : (user as any).role;
+        // Verify admin status via DB role or Environment Variable 
+        const isAdmin = 
+          (user as any).role === "admin" || 
+          user.email === process.env.ADMIN_EMAIL;
+        
+        token.role = isAdmin ? "admin" : "customer";
       }
       return token;
     },
