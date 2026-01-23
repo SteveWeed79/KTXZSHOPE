@@ -1,24 +1,76 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { signIn } from "next-auth/react";
 import { signUp } from "./userActions";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function AuthPage() {
+  const router = useRouter();
   const [isLogin, setIsLogin] = useState(true);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  
+  // PASSWORD STATE (For live validation)
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
-  const handleGoogleLogin = () => {
-    signIn("google", { callbackUrl: "/" });
+  // LIVE VALIDATION LOGIC
+  const validation = useMemo(() => {
+    const hasLetter = /[A-Za-z]/.test(password);
+    const hasNumber = /\d/.test(password);
+    const hasLength = password.length >= 8;
+    const matches = password === confirmPassword && password !== "";
+    return { hasLetter, hasNumber, hasLength, matches };
+  }, [password, confirmPassword]);
+
+  const canRegister = isLogin || (
+    validation.hasLetter && validation.hasNumber && validation.hasLength && validation.matches
+  );
+
+  // REGISTRATION HANDLER
+  const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    const formData = new FormData(e.currentTarget);
+    const email = formData.get("email") as string;
+    const pass = formData.get("password") as string;
+
+    const result = await signUp(formData);
+
+    if (result?.error) {
+      setError(result.error);
+      setLoading(false);
+      return;
+    }
+
+    if (result?.success) {
+      // Auto-Login after successful registration
+      const loginResult = await signIn("credentials", {
+        email: email,
+        password: pass,
+        redirect: false,
+      });
+
+      if (loginResult?.error) {
+        setIsLogin(true);
+        setError("Account created! Please sign in manually.");
+      } else {
+        router.push("/");
+      }
+    }
+    setLoading(false);
   };
 
   return (
-    <main className="min-h-screen bg-black flex items-center justify-center p-6">
+    <main className="min-h-screen bg-black flex items-center justify-center p-6 text-white">
       <div className="w-full max-w-md bg-gray-900/40 p-8 rounded-3xl border border-gray-800 backdrop-blur-md">
         
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-black tracking-tighter uppercase italic text-white">
+          <h1 className="text-3xl font-black tracking-tighter uppercase italic">
             {isLogin ? "System Access" : "Create Identity"}
           </h1>
           <p className="text-[10px] text-gray-500 font-mono uppercase tracking-[0.3em] mt-2">
@@ -33,66 +85,123 @@ export default function AuthPage() {
         )}
 
         {isLogin ? (
-          /* LOGIN FORM */
+          /* FULL LOGIN FORM */
           <form 
             onSubmit={async (e) => {
               e.preventDefault();
+              setLoading(true);
               const formData = new FormData(e.currentTarget);
               const result = await signIn("credentials", { 
                 email: formData.get("email"), 
                 password: formData.get("password"), 
-                redirect: true,
-                callbackUrl: "/" 
+                redirect: false,
               });
-              if (result?.error) setError("Invalid Credentials");
+              if (result?.error) {
+                setError("Invalid Credentials");
+                setLoading(false);
+              } else {
+                router.push("/");
+              }
             }} 
             className="space-y-4"
           >
-            <input name="email" type="email" placeholder="EMAIL" required className="w-full bg-black border border-gray-800 p-4 rounded-xl outline-none focus:border-red-600 transition-all text-sm text-white" />
+            <input 
+              name="email" 
+              type="email" 
+              placeholder="EMAIL" 
+              required 
+              className="w-full bg-black border border-gray-800 p-4 rounded-xl outline-none focus:border-red-600 transition-all text-sm" 
+            />
             <div className="space-y-2">
-              <input name="password" type="password" placeholder="PASSWORD" required className="w-full bg-black border border-gray-800 p-4 rounded-xl outline-none focus:border-red-600 transition-all text-sm text-white" />
+              <input 
+                name="password" 
+                type="password" 
+                placeholder="PASSWORD" 
+                required 
+                className="w-full bg-black border border-gray-800 p-4 rounded-xl outline-none focus:border-red-600 transition-all text-sm" 
+              />
               <div className="text-right px-1">
                 <Link href="/forgot-password" size="sm" className="text-[10px] text-gray-500 hover:text-red-600 uppercase tracking-widest font-bold">
                   Forgot Password?
                 </Link>
               </div>
             </div>
-            <button className="w-full bg-white text-black font-black py-4 rounded-xl hover:bg-red-600 hover:text-white transition-all uppercase text-xs tracking-[0.2em]">
-              Login
+            <button 
+              disabled={loading} 
+              className="w-full bg-white text-black font-black py-4 rounded-xl hover:bg-red-600 hover:text-white transition-all uppercase text-xs tracking-[0.2em] disabled:opacity-50"
+            >
+              {loading ? "Authenticating..." : "Login"}
             </button>
           </form>
         ) : (
-          /* SIGN UP FORM */
-          <form action={signUp} className="space-y-4">
-            <input name="name" type="text" placeholder="FULL NAME" required className="w-full bg-black border border-gray-800 p-4 rounded-xl outline-none focus:border-red-600 transition-all text-sm text-white" />
-            <input name="email" type="email" placeholder="EMAIL ADDRESS" required className="w-full bg-black border border-gray-800 p-4 rounded-xl outline-none focus:border-red-600 transition-all text-sm text-white" />
+          /* FULL SIGN UP FORM */
+          <form onSubmit={handleRegister} className="space-y-4">
+            <input name="name" type="text" placeholder="FULL NAME" required className="w-full bg-black border border-gray-800 p-4 rounded-xl outline-none focus:border-red-600 transition-all text-sm" />
+            <input name="email" type="email" placeholder="EMAIL ADDRESS" required className="w-full bg-black border border-gray-800 p-4 rounded-xl outline-none focus:border-red-600 transition-all text-sm" />
             
             <div className="grid grid-cols-1 gap-4">
-              <input name="password" type="password" placeholder="NEW PASSWORD" required className="w-full bg-black border border-gray-800 p-4 rounded-xl outline-none focus:border-red-600 transition-all text-sm text-white" />
-              <input name="confirmPassword" type="password" placeholder="VERIFY PASSWORD" required className="w-full bg-black border border-gray-800 p-4 rounded-xl outline-none focus:border-red-600 transition-all text-sm text-white" />
+              <input 
+                name="password" 
+                type="password" 
+                placeholder="NEW PASSWORD" 
+                required 
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-black border border-gray-800 p-4 rounded-xl outline-none focus:border-red-600 transition-all text-sm" 
+              />
+              <input 
+                name="confirmPassword" 
+                type="password" 
+                placeholder="VERIFY PASSWORD" 
+                required 
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className={`w-full bg-black border p-4 rounded-xl outline-none transition-all text-sm ${
+                  confirmPassword && !validation.matches ? 'border-red-600/50' : 'border-gray-800'
+                }`} 
+              />
             </div>
-            <p className="text-[9px] text-gray-600 uppercase font-mono px-1">
-              Security: Min. 8 characters, 1 letter, 1 number
-            </p>
 
-            <button className="w-full bg-red-600 text-white font-black py-4 rounded-xl hover:bg-red-500 transition-all uppercase text-xs tracking-widest">
-              Confirm Registration
+            <div className="flex flex-wrap gap-x-4 gap-y-1 px-1">
+               <span className={`text-[9px] uppercase font-mono ${validation.hasLength ? 'text-green-500' : 'text-gray-600'}`}>
+                 {validation.hasLength ? '✓' : '○'} 8+ Chars
+               </span>
+               <span className={`text-[9px] uppercase font-mono ${validation.hasLetter ? 'text-green-500' : 'text-gray-600'}`}>
+                 {validation.hasLetter ? '✓' : '○'} 1+ Letter
+               </span>
+               <span className={`text-[9px] uppercase font-mono ${validation.hasNumber ? 'text-green-500' : 'text-gray-600'}`}>
+                 {validation.hasNumber ? '✓' : '○'} 1+ Number
+               </span>
+               {confirmPassword && !validation.matches && (
+                 <span className="text-[9px] uppercase font-mono text-red-500 w-full mt-1 font-bold">
+                   ! Passwords do not match
+                 </span>
+               )}
+            </div>
+
+            <button 
+              disabled={!canRegister || loading}
+              className={`w-full font-black py-4 rounded-xl transition-all uppercase text-xs tracking-widest ${
+                canRegister && !loading
+                ? "bg-red-600 text-white hover:bg-red-500 cursor-pointer" 
+                : "bg-gray-800 text-gray-600 cursor-not-allowed"
+              }`}
+            >
+              {loading ? "Initializing..." : canRegister ? "Confirm Registration" : "Locked"}
             </button>
           </form>
         )}
 
-        {/* --- GOOGLE OAUTH SECTION --- */}
         <div className="relative my-8">
           <div className="absolute inset-0 flex items-center">
             <span className="w-full border-t border-gray-800"></span>
           </div>
           <div className="relative flex justify-center text-[10px] uppercase">
-            <span className="bg-[#0a0a0a] px-2 text-gray-600 font-mono tracking-widest">or continue with</span>
+            <span className="bg-[#0b0c0d] px-2 text-gray-600 font-mono tracking-widest">or continue with</span>
           </div>
         </div>
 
         <button 
-          onClick={handleGoogleLogin}
+          type="button"
+          onClick={() => signIn("google", { callbackUrl: "/" })}
           className="w-full border border-gray-800 text-white font-bold py-4 rounded-xl hover:bg-white hover:text-black transition-all uppercase text-[10px] tracking-widest flex items-center justify-center gap-3"
         >
           <svg className="w-4 h-4" viewBox="0 0 24 24">
@@ -106,7 +215,10 @@ export default function AuthPage() {
 
         <div className="text-center mt-6">
           <button 
-            onClick={() => setIsLogin(!isLogin)} 
+            onClick={() => {
+              setIsLogin(!isLogin);
+              setError("");
+            }} 
             className="text-gray-500 text-[10px] uppercase hover:text-white font-bold tracking-widest"
           >
             {isLogin ? "New to KTXZ? Register" : "Existing Member? Sign In"}

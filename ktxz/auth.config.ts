@@ -1,27 +1,33 @@
 import type { NextAuthConfig } from "next-auth";
-import Google from "next-auth/providers/google";
 
 export const authConfig = {
-  providers: [
-    Google({
-      clientId: process.env.AUTH_GOOGLE_ID,
-      clientSecret: process.env.AUTH_GOOGLE_SECRET,
-    }),
-  ],
+  pages: {
+    signIn: "/login",
+  },
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
+      const userRole = (auth?.user as any)?.role;
+      const userEmail = auth?.user?.email;
+
       const isAdminPage = nextUrl.pathname.startsWith("/admin");
-      const adminEmail = process.env.ADMIN_EMAIL;
+      const isProfilePage = nextUrl.pathname.startsWith("/profile");
+
+      // LOGIC: Check both the role AND the hardcoded email as a backup
+      const isAdmin = userEmail === "steveweed1979@gmail.com" || userRole === "admin";
 
       if (isAdminPage) {
-        if (isLoggedIn && auth?.user?.email === adminEmail) {
-          return true;
-        }
-        // Redirect non-admins or logged-out users to home or login
-        return Response.redirect(new URL("/", nextUrl));
+        if (isLoggedIn && isAdmin) return true;
+        // This is where it's failing you: if this returns false, it redirects
+        return false; 
       }
+
+      if (isProfilePage) {
+        return isLoggedIn;
+      }
+
       return true;
     },
   },
+  providers: [], 
 } satisfies NextAuthConfig;

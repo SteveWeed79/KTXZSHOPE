@@ -3,35 +3,44 @@
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
 import bcrypt from "bcryptjs";
-import { redirect } from "next/navigation";
 
 export async function signUp(formData: FormData) {
-  await dbConnect();
+  try {
+    const name = formData.get("name") as string;
+    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
+    const confirmPassword = formData.get("confirmPassword") as string;
 
-  const name = formData.get("name") as string;
-  const email = formData.get("email") as string;
-  const password = formData.get("password") as string;
-  const confirmPassword = formData.get("confirmPassword") as string;
+    // 1. Structural Validation (Failsafe)
+    if (password !== confirmPassword) {
+      return { error: "PASSWORDS DO NOT MATCH." };
+    }
 
-  if (password !== confirmPassword) throw new Error("Passwords do not match.");
+    const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d!@#$%^&*]{8,}$/;
+    if (!passwordRegex.test(password)) {
+      return { error: "SECURITY CRITERIA NOT MET." };
+    }
 
-  const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d!@#$%^&*]{8,}$/;
-  if (!passwordRegex.test(password)) {
-    throw new Error("Password must be at least 8 characters long (1 letter, 1 number).");
+    // 2. Database Operations
+    await dbConnect();
+
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    if (existingUser) {
+      return { error: "IDENTITY ALREADY REGISTERED." };
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    await User.create({
+      name,
+      email: email.toLowerCase(),
+      password: hashedPassword,
+      role: "customer"
+    });
+
+    return { success: true };
+  } catch (e) {
+    console.error("SIGNUP_ERROR:", e);
+    return { error: "SYSTEM FAILURE. TRY AGAIN LATER." };
   }
-
-  const existingUser = await User.findOne({ email: email.toLowerCase() });
-  if (existingUser) throw new Error("Email already in use.");
-
-  const hashedPassword = await bcrypt.hash(password, 12);
-
-  await User.create({
-    name,
-    email: email.toLowerCase(),
-    password: hashedPassword,
-    role: "customer"
-  });
-
-  // Redirecting with a specific success parameter
-  redirect("/login?success=account-created");
 }

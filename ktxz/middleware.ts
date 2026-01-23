@@ -1,18 +1,11 @@
-import { auth } from "@/auth";
-import { NextResponse } from "next/server";
+import NextAuth from "next-auth";
+import { authConfig } from "./auth.config";
 
-export default auth((req) => {
-  const isLoggedIn = !!req.auth;
-  const userEmail = req.auth?.user?.email;
-  const adminEmail = process.env.ADMIN_EMAIL;
-  
-  const isAdminPage = req.nextUrl.pathname.startsWith("/admin");
+// We do NOT import from "@/auth" here. 
+// We create a "light" version of the auth helper that only knows the routes.
+export const { auth: middleware } = NextAuth(authConfig);
 
-  // If trying to access admin and not the admin user, kick them to home
-  if (isAdminPage && userEmail !== adminEmail) {
-    return NextResponse.redirect(new URL("/", req.nextUrl));
-  }
-});
+export default middleware;
 
 export const config = {
   matcher: ["/admin/:path*", "/profile/:path*"],

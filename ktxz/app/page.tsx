@@ -19,7 +19,7 @@ export default async function Home() {
   })
   .populate('brand')
   .sort({ vaultReleaseDate: -1 }) // Newest activations appear first
-  .limit(8) // Increased limit to ensure test cards aren't pushed out
+  .limit(8) 
   .lean();
 
   return (
@@ -28,14 +28,26 @@ export default async function Home() {
         <h1 className="text-8xl md:text-9xl font-black tracking-tighter italic uppercase leading-none">
           KTXZ<span className="text-red-600 font-normal">SHOPE</span>
         </h1>
-        <p className="text-gray-500 font-mono tracking-[0.4em] uppercase text-[10px]">Elite Trading Card Acquisitions // Global Sector</p>
+        <p className="text-gray-500 font-mono tracking-[0.4em] uppercase text-[10px]">
+          Elite Trading Card Acquisitions // Global Sector
+        </p>
+        
         <div className="flex gap-4 justify-center pt-8">
           <Link href="/shop" className="btn-primary">Enter Marketplace</Link>
-          <Link href={session ? "/profile" : "/login"} className="btn-black">{session ? "View Profile" : "Access Identity"}</Link>
+          
+          {/* UPDATED LOGIC: Only show button if user is logged in */}
+          {session && (
+            <Link href="/profile" className="btn-black">
+              Access Identity
+            </Link>
+          )}
         </div>
+
         {userEmail === adminEmail && (
           <div className="pt-4">
-            <Link href="/admin" className="text-[10px] text-red-600 font-bold uppercase tracking-[0.3em] hover:underline">[ Command Center ]</Link>
+            <Link href="/admin" className="text-[10px] text-red-600 font-bold uppercase tracking-[0.3em] hover:underline">
+              [ Command Center ]
+            </Link>
           </div>
         )}
       </div>
@@ -51,7 +63,6 @@ export default async function Home() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
               {vaultCards.map((card: any) => (
-                /* Enforce portrait ratio here */
                 <div key={card._id.toString()} className="w-full aspect-[2.5/3.5]">
                   <ProductCard card={card} />
                 </div>

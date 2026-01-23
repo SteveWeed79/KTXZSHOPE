@@ -1,115 +1,135 @@
 "use server";
 
-import dbConnect from "@/lib/dbConnect";
-import Card from "@/models/Card";
-import Brand from "@/models/Brand";
 import { revalidatePath } from "next/cache";
+import Brand from "@/models/Brand";
+import Card from "@/models/Card";
+import dbConnect from "@/lib/dbConnect";
 import { auth } from "@/auth";
 
-// --- SECURITY: SHARED ADMIN CHECK ---
+// --- UTILITY: SLUG GENERATOR ---
+const slugify = (text: string) =>
+  text
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/[^\w-]+/g, "")
+    .replace(/--+/g, "-");
+
+// --- SHARED SECURITY ---
 async function checkAdmin() {
   const session = await auth();
-  const adminEmail = "steveweed1979@gmail.com"; 
-  if (!session?.user || session.user.email !== adminEmail) {
-    throw new Error("Unauthorized: Administrative Access Required.");
-  }
+  const isAdmin = 
+    session?.user?.email === "steveweed1979@gmail.com" || 
+    (session?.user as any)?.role === "admin";
+
+  if (!isAdmin) throw new Error("Unauthorized: Administrative Access Required.");
 }
 
-// --- BRAND ACTIONS (CATEGORIES) ---
+// --- BRAND / CATEGORY ACTIONS ---
+
 export async function createBrand(formData: FormData) {
   await checkAdmin();
   await dbConnect();
-  const name = formData.get("name");
+  
+  const name = formData.get("name") as string;
   if (!name) throw new Error("Name required");
-  await Brand.create({ name });
+
+  const slug = slugify(name);
+  const existing = await Brand.findOne({ slug });
+  if (existing) throw new Error("A category with this name already exists.");
+
+  await Brand.create({ name, slug });
+
   revalidatePath("/admin");
+  revalidatePath("/");
 }
 
-export async function deleteBrand(formData: FormData) {
+export async function deleteBrand(id: string) {
   await checkAdmin();
   await dbConnect();
-  const brandId = formData.get("brandId");
   
-  // Integrity Check: Prevent orphaned cards
-  const cardCount = await Card.countDocuments({ brand: brandId });
-  if (cardCount > 0) throw new Error("Category not empty. Remove cards first.");
-  
-  await Brand.findByIdAndDelete(brandId);
+  const count = await Card.countDocuments({ brand: id });
+  if (count > 0) throw new Error("Cannot delete category: It still contains cards.");
+
+  await Brand.findByIdAndDelete(id);
   revalidatePath("/admin");
 }
 
-// --- CARD ACTIONS (CRUD & VAULT) ---
+// --- CARD ACTIONS ---
 
-// CREATE
 export async function createCard(formData: FormData) {
   await checkAdmin();
   await dbConnect();
-  await Card.create({
-    name: formData.get("name"),
-    price: parseFloat(formData.get("price") as string),
-    rarity: formData.get("rarity"),
-    brand: formData.get("brandId"),
-    image: formData.get("image"),
-    description: formData.get("description"),
-    isVault: false,
-  });
-  revalidatePath("/admin");
-  revalidatePath("/shop");
-}
+  
+  const rawData = Object.fromEntries(formData.entries());
 
-export async function updateCard(formData: FormData) {
-  await checkAdmin();
-  await dbConnect();
-
-  const cardId = formData.get("cardId");
-  const updates = {
-    name: formData.get("name") as string,
-    price: parseFloat(formData.get("price") as string),
-    rarity: formData.get("rarity") as string,
-    image: formData.get("image") as string,
-    description: formData.get("description") as string, // Added this line
+  // VALIDATION: Check for brand specifically before creating
+  if (!rawData.brand || rawData.brand === "") {
+    throw new Error("Validation Error: You must select a Category/Brand for this card.");
+  }
+  
+  const data = {
+    ...rawData,
+    price: Number(rawData.price),
+    // Ensure brand is treated as a string ID
+    brand: String(rawData.brand),
+    isVault: rawData.isVault === "on" || rawData.isVault === "true",
+    isFeatured: rawData.isFeatured === "on" || rawData.isFeatured === "true",
   };
 
-  await Card.findByIdAndUpdate(cardId, updates);
-
+  await Card.create(data);
+  
   revalidatePath("/admin");
   revalidatePath("/shop");
   revalidatePath("/");
 }
 
-// DELETE (THE "D" IN CRUD)
-export async function deleteCard(formData: FormData) {
+export async function updateCard(id: string, formData: FormData) {
   await checkAdmin();
   await dbConnect();
-  await Card.findByIdAndDelete(formData.get("cardId"));
-  revalidatePath("/admin");
-  revalidatePath("/shop");
-  revalidatePath("/");
-}
 
-// VAULT LOGISTICS
-export async function updateVaultStatus(formData: FormData) {
-  await checkAdmin();
-  await dbConnect();
-  const cardId = formData.get("cardId");
-  const actionType = formData.get("actionType");
-  const releaseRaw = formData.get("vaultReleaseDate");
-  const expiryRaw = formData.get("vaultExpiryDate");
+  const rawData = Object.fromEntries(formData.entries());
 
-  if (actionType === "deactivate") {
-    await Card.findByIdAndUpdate(cardId, { 
-      isVault: false, 
-      vaultReleaseDate: null, 
-      vaultExpiryDate: null 
-    });
-  } else {
-    await Card.findByIdAndUpdate(cardId, {
-      isVault: true,
-      vaultReleaseDate: releaseRaw ? new Date(releaseRaw as string) : new Date(),
-      vaultExpiryDate: expiryRaw ? new Date(expiryRaw as string) : null,
-    });
+  // VALIDATION: Ensure brand isn't removed during update
+  if (!rawData.brand || rawData.brand === "") {
+    throw new Error("Validation Error: Brand is required.");
   }
-  revalidatePath("/");
+
+  const data = {
+    ...rawData,
+    price: Number(rawData.price),
+    brand: String(rawData.brand),
+    isVault: rawData.isVault === "on" || rawData.isVault === "true",
+    isFeatured: rawData.isFeatured === "on" || rawData.isFeatured === "true",
+  };
+
+  await Card.findByIdAndUpdate(id, data);
+  
   revalidatePath("/admin");
   revalidatePath("/shop");
+  revalidatePath("/");
+}
+
+export async function deleteCard(id: string) {
+  await checkAdmin();
+  await dbConnect();
+  
+  await Card.findByIdAndDelete(id);
+  
+  revalidatePath("/admin");
+  revalidatePath("/shop");
+  revalidatePath("/");
+}
+
+// --- STATUS ACTIONS ---
+
+export async function updateVaultStatus(id: string, isVault: boolean) {
+  await checkAdmin();
+  await dbConnect();
+  
+  await Card.findByIdAndUpdate(id, { isVault });
+  
+  revalidatePath("/admin");
+  revalidatePath("/");
 }
