@@ -1,12 +1,14 @@
+// ktxz/middleware.ts
 import NextAuth from "next-auth";
 import { authConfig } from "./auth.config";
 
-// We do NOT import from "@/auth" here. 
-// We create a "light" version of the auth helper that only knows the routes.
+// Do NOT import from "@/auth" here (Edge runtime).
+// Use the lightweight config-only helper.
 export const { auth: middleware } = NextAuth(authConfig);
 
 export default middleware;
 
+// Next.js Middleware route matcher (must be named `config`)
 export const config = {
   matcher: ["/admin/:path*", "/profile/:path*"],
 };

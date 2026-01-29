@@ -1,12 +1,13 @@
-@import "tailwindcss";
-
-@theme {
-  --color-ktx-red: #ff0000;
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* Your theme token */
+  --color-ktx-red: #ff0000;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -22,7 +23,7 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* --- REPAIRED BUTTON CLASSES --- */
+/* --- BUTTON CLASSES --- */
 
 .btn-primary {
   @apply bg-red-600 text-white font-bold py-3 px-6 rounded-xl transition-all duration-200 uppercase text-xs tracking-widest hover:bg-red-700;

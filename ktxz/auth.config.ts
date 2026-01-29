@@ -1,3 +1,4 @@
+// ktxz/auth.config.ts
 import type { NextAuthConfig } from "next-auth";
 
 export const authConfig = {
@@ -10,18 +11,21 @@ export const authConfig = {
       const userRole = (auth?.user as any)?.role;
       const userEmail = auth?.user?.email;
 
-      const isAdminPage = nextUrl.pathname.startsWith("/admin");
-      
-      // Determine if the current user has admin rights [cite: 54, 55]
-      const isAdmin = 
-        userRole === "admin" || 
-        (userEmail && userEmail === process.env.ADMIN_EMAIL);
+      const pathname = nextUrl.pathname;
 
-      if (isAdminPage) {
-        return isLoggedIn && isAdmin;
-      }
+      const isAdminPage = pathname.startsWith("/admin");
+      const isProfilePage = pathname.startsWith("/profile");
+
+      // Admin if DB role is admin OR email matches env ADMIN_EMAIL
+      const isAdmin =
+        userRole === "admin" ||
+        (!!userEmail && userEmail === process.env.ADMIN_EMAIL);
+
+      if (isAdminPage) return isLoggedIn && isAdmin;
+      if (isProfilePage) return isLoggedIn;
+
       return true;
     },
   },
-  providers: [], 
+  providers: [],
 } satisfies NextAuthConfig;
