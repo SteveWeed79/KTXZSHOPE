@@ -5,18 +5,17 @@ import Card from "@/models/Card";
 
 const CART_COOKIE = "ktxz_cart_v1";
 
-type CartItem = { cardId: string; quantity?: number };
+type CookieCartItem = { cardId: string; qty: number };
+type CookieCart = { id: string; items: CookieCartItem[]; updatedAt: number };
 
-function parseCartCookie(raw: string | undefined): CartItem[] {
-  if (!raw) return [];
+function safeParseCart(raw: string | undefined): CookieCart | null {
+  if (!raw) return null;
   try {
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed
-      .filter((x) => x && typeof x.cardId === "string")
-      .map((x) => ({ cardId: x.cardId, quantity: Number(x.quantity || 1) }));
+    const parsed = JSON.parse(raw) as CookieCart;
+    if (!parsed?.id || !Array.isArray(parsed.items)) return null;
+    return parsed;
   } catch {
-    return [];
+    return null;
   }
 }
 
@@ -27,17 +26,21 @@ function money(n: number) {
 export default async function CartPage() {
   const cookieStore = await cookies();
   const raw = cookieStore.get(CART_COOKIE)?.value;
-  const cart = parseCartCookie(raw);
+
+  const cart = safeParseCart(raw);
+  const items = cart?.items ?? [];
 
   await dbConnect();
 
-  const ids = cart.map((c) => c.cardId);
-  const cardsRaw = ids.length ? await Card.find({ _id: { $in: ids } }).populate("brand").lean() : [];
+  const ids = items.map((c) => c.cardId).filter(Boolean);
+  const cardsRaw = ids.length
+    ? await Card.find({ _id: { $in: ids } }).populate("brand").lean()
+    : [];
 
   const cardMap = new Map<string, any>();
   for (const c of cardsRaw) cardMap.set(String(c._id), c);
 
-  const rows = cart
+  const rows = items
     .map((ci) => {
       const card = cardMap.get(ci.cardId);
       if (!card) return null;
@@ -47,9 +50,11 @@ export default async function CartPage() {
       const isActive = card.isActive ?? true;
       const status = card.status ?? "active";
 
-      const qtyRequested = Math.max(1, Number(ci.quantity || 1));
+      const qtyRequested = Math.max(1, Number(ci.qty || 1));
       const qty =
-        inventoryType === "single" ? 1 : Math.min(qtyRequested, Math.max(0, stock || qtyRequested));
+        inventoryType === "single"
+          ? 1
+          : Math.min(qtyRequested, Math.max(0, stock || qtyRequested));
 
       const lineTotal = Number(card.price) * qty;
 
@@ -97,7 +102,8 @@ export default async function CartPage() {
           <section className="lg:col-span-8 space-y-4">
             {rows.map((r) => {
               const unavailable = !r.isActive || r.status === "sold";
-              const bulkLowStock = r.inventoryType === "bulk" && r.stock > 0 && r.qty > r.stock;
+              const bulkLowStock =
+                r.inventoryType === "bulk" && r.stock > 0 && r.qty > r.stock;
 
               return (
                 <div
@@ -144,7 +150,7 @@ export default async function CartPage() {
                             Qty
                           </label>
                           <input
-                            name="quantity"
+                            name="qty"
                             type="number"
                             min={1}
                             max={Math.max(1, r.stock || 1)}
@@ -207,11 +213,9 @@ export default async function CartPage() {
                 Tax + shipping calculated by Stripe at checkout (based on address).
               </p>
 
-              <form action="/api/cart/checkout" method="post" className="mt-6">
-                <button className="w-full btn-primary">
-                  Proceed to Checkout
-                </button>
-              </form>
+              <Link href="/checkout" className="btn-primary w-full block text-center mt-6">
+                Proceed to Checkout
+              </Link>
 
               <Link
                 href="/shop"

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
-import stripe from "@/lib/stripe";
+import { getStripe } from "@/lib/stripe";
 import dbConnect from "@/lib/dbConnect";
 import Card from "@/models/Card";
 
@@ -15,6 +15,25 @@ export default async function CheckoutSuccessPage({
 }: {
   searchParams: Promise<{ session_id?: string }>;
 }) {
+  const stripe = getStripe();
+  if (!stripe) {
+    return (
+      <main className="min-h-[80vh] py-16 max-w-4xl mx-auto">
+        <div className="border border-gray-900 bg-gray-950/30 rounded-3xl p-10 text-center">
+          <h1 className="text-3xl font-black italic uppercase tracking-tighter text-white">
+            Checkout Complete
+          </h1>
+          <p className="text-gray-500 font-mono text-[10px] tracking-[0.3em] uppercase mt-4">
+            Stripe is not configured
+          </p>
+          <Link href="/shop" className="btn-primary inline-block mt-10">
+            Return to Shop
+          </Link>
+        </div>
+      </main>
+    );
+  }
+
   const { session_id } = await searchParams;
 
   if (!session_id) {
@@ -35,15 +54,12 @@ export default async function CheckoutSuccessPage({
     );
   }
 
-  // Fetch Stripe session for display (safe; no secrets revealed)
   const session = await stripe.checkout.sessions.retrieve(session_id, {
     expand: ["line_items.data.price.product"],
   });
 
-  // Only treat as success if paid
   const paid = session.payment_status === "paid";
 
-  // Clear cart cookie on success (guest cart)
   if (paid) {
     const cookieStore = await cookies();
     cookieStore.set(CART_COOKIE, "", {
@@ -55,18 +71,18 @@ export default async function CheckoutSuccessPage({
     });
   }
 
-  // Optional: display items + basic totals
   const lineItems = (session as any).line_items?.data ?? [];
   const amountTotal = typeof session.amount_total === "number" ? session.amount_total : 0;
   const amountSubtotal = typeof session.amount_subtotal === "number" ? session.amount_subtotal : 0;
-  const amountTax = typeof session.total_details?.amount_tax === "number" ? session.total_details.amount_tax : 0;
+  const amountTax =
+    typeof session.total_details?.amount_tax === "number" ? session.total_details.amount_tax : 0;
   const amountShipping =
-    typeof session.total_details?.amount_shipping === "number" ? session.total_details.amount_shipping : 0;
+    typeof session.total_details?.amount_shipping === "number"
+      ? session.total_details.amount_shipping
+      : 0;
 
-  // Try to show card names reliably from Stripe line items; fall back to DB if needed later.
-  // (No DB writes here yet — orders come next.)
-  await dbConnect(); // harmless; keeps pattern consistent for next steps
-  void Card; // keeps lint happy if unused depending on config
+  await dbConnect();
+  void Card;
 
   return (
     <main className="min-h-[80vh] py-12 max-w-5xl mx-auto">
