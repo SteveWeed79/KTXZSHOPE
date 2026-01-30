@@ -1,43 +1,89 @@
+// ktxz/components/VaultAutoRefresh.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
-export default function VaultAutoRefresh({ events }: { events: Date[] }) {
+type VaultAutoRefreshProps = {
+  // Accept serializable values from Server Components (Date becomes string)
+  events: Array<string | number | Date | null | undefined>;
+};
+
+function toMillis(value: VaultAutoRefreshProps["events"][number]): number | null {
+  if (!value) return null;
+  const t = new Date(value as any).getTime();
+  return Number.isFinite(t) ? t : null;
+}
+
+export default function VaultAutoRefresh({ events }: VaultAutoRefreshProps) {
   const router = useRouter();
-  // We use a bit of local state to trigger a re-evaluation after a refresh
-  const [lastRefresh, setLastRefresh] = useState(Date.now());
+
+  // Used only to re-run the effect after an intentional refresh.
+  const [lastRefresh, setLastRefresh] = useState(0);
+
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Track which exact event timestamp we scheduled/fired for to prevent duplicates.
+  const scheduledEventMsRef = useRef<number | null>(null);
+  const lastFiredEventMsRef = useRef<number | null>(null);
+
+  // Hard stop against runaway loops (dev/prod safety).
+  const lastFiredAtMsRef = useRef<number>(0);
 
   useEffect(() => {
+    // Always clear any prior timer when inputs change (or on strict-mode re-run).
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+
+    if (!events || events.length === 0) return;
+
     const now = Date.now();
-    
-    // 1. Convert all incoming dates to timestamps
-    // 2. Filter out past events
-    // 3. Sort to find the absolute soonest one
-    const upcomingEvents = events
-      .map(d => new Date(d).getTime())
-      .filter(t => t > now)
+
+    const upcoming = events
+      .map(toMillis)
+      .filter((t): t is number => typeof t === "number" && t > now)
       .sort((a, b) => a - b);
 
-    // If no future events exist, stop the effect
-    if (upcomingEvents.length === 0) return;
+    if (upcoming.length === 0) return;
 
-    const nextEventTime = upcomingEvents[0];
-    const timeUntilEvent = nextEventTime - now;
+    const nextEventMs = upcoming[0];
 
-    // Logic: Set the timer to trigger the refresh
-    // We add a 1000ms (1s) buffer. 500ms is sometimes too tight for 
-    // the server-side environment to register the new second.
-    const timer = setTimeout(() => {
+    // Schedule refresh slightly after the event time (buffer for DB writes / clocks).
+    const delayMs = Math.max(nextEventMs - now + 1000, 250);
+
+    scheduledEventMsRef.current = nextEventMs;
+
+    timerRef.current = setTimeout(() => {
+      const firedAt = Date.now();
+      const scheduledFor = scheduledEventMsRef.current;
+
+      // Guard 1: never refresh twice for the exact same event timestamp.
+      if (scheduledFor !== null && lastFiredEventMsRef.current === scheduledFor) {
+        return;
+      }
+
+      // Guard 2: cooldown against runaway loops.
+      const COOLDOWN_MS = 5000;
+      if (firedAt - lastFiredAtMsRef.current < COOLDOWN_MS) {
+        return;
+      }
+
+      if (scheduledFor !== null) lastFiredEventMsRef.current = scheduledFor;
+      lastFiredAtMsRef.current = firedAt;
+
       router.refresh();
-      // Update local state to force the useEffect to re-run 
-      // and look for the NEXT event in the list
-      setLastRefresh(Date.now());
-    }, timeUntilEvent + 1000);
+      setLastRefresh(firedAt);
+    }, delayMs);
 
-    // Cleanup: Crucial to prevent multiple timers if the component re-renders
-    return () => clearTimeout(timer);
-  }, [events, router, lastRefresh]);
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [events, lastRefresh, router]);
 
   return null;
 }
