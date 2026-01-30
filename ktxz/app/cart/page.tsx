@@ -1,23 +1,9 @@
+// ktxz/app/cart/page.tsx
 import Link from "next/link";
 import { cookies } from "next/headers";
 import dbConnect from "@/lib/dbConnect";
 import Card from "@/models/Card";
-
-const CART_COOKIE = "ktxz_cart_v1";
-
-type CookieCartItem = { cardId: string; qty: number };
-type CookieCart = { id: string; items: CookieCartItem[]; updatedAt: number };
-
-function safeParseCart(raw: string | undefined): CookieCart | null {
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw) as CookieCart;
-    if (!parsed?.id || !Array.isArray(parsed.items)) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
+import { CART_COOKIE, getCartFromCookies } from "@/lib/cartCookie";
 
 function money(n: number) {
   return `$${n.toFixed(2)}`;
@@ -25,14 +11,14 @@ function money(n: number) {
 
 export default async function CartPage() {
   const cookieStore = await cookies();
-  const raw = cookieStore.get(CART_COOKIE)?.value;
 
-  const cart = safeParseCart(raw);
-  const items = cart?.items ?? [];
+  // ✅ Canonical + backward-compatible parsing (handles legacy array cookies too)
+  const cart = getCartFromCookies(cookieStore);
+  const items = cart.items;
 
   await dbConnect();
 
-  const ids = items.map((c) => c.cardId).filter(Boolean);
+  const ids = items.map((c) => c.cardId);
   const cardsRaw = ids.length
     ? await Card.find({ _id: { $in: ids } }).populate("brand").lean()
     : [];
@@ -113,7 +99,11 @@ export default async function CartPage() {
                   <div className="w-20 shrink-0">
                     <div className="aspect-[2.5/3.5] bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
                       {r.image ? (
-                        <img src={r.image} alt={r.name} className="w-full h-full object-cover" />
+                        <img
+                          src={r.image}
+                          alt={r.name}
+                          className="w-full h-full object-cover"
+                        />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-gray-700 font-black">
                           TCG
@@ -131,7 +121,9 @@ export default async function CartPage() {
                         <p className="text-gray-500 text-[10px] font-mono uppercase tracking-[0.3em] mt-2">
                           {r.brandName} // {r.rarity}
                         </p>
-                        <p className="text-white font-bold mt-2">{money(r.price)}</p>
+                        <p className="text-white font-bold mt-2">
+                          {money(r.price)}
+                        </p>
                       </div>
 
                       <Link
@@ -144,13 +136,17 @@ export default async function CartPage() {
 
                     <div className="mt-4 flex flex-wrap items-center gap-3">
                       {r.inventoryType === "bulk" ? (
-                        <form action={`/api/cart/update`} method="post" className="flex items-center gap-2">
+                        <form
+                          action={`/api/cart/update`}
+                          method="post"
+                          className="flex items-center gap-2"
+                        >
                           <input type="hidden" name="cardId" value={r.cardId} />
                           <label className="text-[10px] text-gray-600 uppercase font-mono">
                             Qty
                           </label>
                           <input
-                            name="qty"
+                            name="quantity"
                             type="number"
                             min={1}
                             max={Math.max(1, r.stock || 1)}
@@ -181,7 +177,9 @@ export default async function CartPage() {
                         <p className="text-[10px] text-gray-600 font-mono uppercase tracking-widest">
                           Line Total
                         </p>
-                        <p className="text-white font-black">{money(r.lineTotal)}</p>
+                        <p className="text-white font-black">
+                          {money(r.lineTotal)}
+                        </p>
                       </div>
                     </div>
 
@@ -213,9 +211,9 @@ export default async function CartPage() {
                 Tax + shipping calculated by Stripe at checkout (based on address).
               </p>
 
-              <Link href="/checkout" className="btn-primary w-full block text-center mt-6">
-                Proceed to Checkout
-              </Link>
+              <form action="/api/cart/checkout" method="post" className="mt-6">
+                <button className="w-full btn-primary">Proceed to Checkout</button>
+              </form>
 
               <Link
                 href="/shop"
