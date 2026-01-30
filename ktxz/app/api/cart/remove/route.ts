@@ -1,4 +1,4 @@
-// ktxz/app/api/cart/remove/route.ts
+// ktxz/app/api/cart/route/remove/route.ts
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import {

@@ -49,7 +49,12 @@ const CardSchema = new Schema(
     // Reservation window for checkout holds (10 minutes)
     reservedUntil: { type: Date, default: null, index: true },
     reservedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
-    reservedOrderId: { type: mongoose.Schema.Types.ObjectId, ref: "Order", default: null, index: true },
+    reservedOrderId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Order",
+      default: null,
+      index: true,
+    },
 
     // --- VAULT & SCHEDULING FIELDS ---
     isVault: { type: Boolean, default: false, index: true },
@@ -66,15 +71,22 @@ CardSchema.index({ isVault: 1, vaultReleaseDate: 1, vaultExpiryDate: 1 });
 CardSchema.index({ status: 1, reservedUntil: 1 });
 
 // Optional: keep singles sane at save-time
-CardSchema.pre("save", function (next) {
-  // Ensure stock rules for singles
+// Mongoose 9+: do NOT use `next()` in pre middleware. :contentReference[oaicite:2]{index=2}
+CardSchema.pre("save", function () {
   if (this.inventoryType === "single") {
     if (this.stock > 1) this.stock = 1;
-    // If a single is marked sold, force stock 0
     if (this.status === "sold") this.stock = 0;
   }
-  next();
 });
 
-const Card = models.Card || model("Card", CardSchema);
+// DEV SAFETY: If Turbopack/hot reload kept an old compiled model around,
+// delete it so the updated schema/middleware is used.
+if (process.env.NODE_ENV !== "production") {
+  const m = mongoose as any;
+  if (m.models?.Card) {
+    delete m.models.Card;
+  }
+}
+
+const Card = (models as any).Card || model("Card", CardSchema);
 export default Card;

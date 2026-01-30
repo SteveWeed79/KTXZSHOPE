@@ -3,73 +3,69 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import dbConnect from "@/lib/dbConnect";
 import Card from "@/models/Card";
+import { getCartFromCookies, saveCartToCookies, setCartItem } from "@/lib/cartCookie";
 
 export const runtime = "nodejs";
 
-const CART_COOKIE = "ktxz_cart_v1";
-
-type CookieCartItem = { cardId: string; qty: number };
-type CookieCart = { id: string; items: CookieCartItem[]; updatedAt: number };
-
-function safeParseCart(raw: string | undefined): CookieCart | null {
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw) as CookieCart;
-    if (!parsed?.id || !Array.isArray(parsed.items)) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
+function redirectToCart(req: Request, query?: string) {
+  const url = new URL("/cart", req.url);
+  if (query) url.search = query.startsWith("?") ? query : `?${query}`;
+  return NextResponse.redirect(url, { status: 303 });
 }
 
-function writeCart(cart: CookieCart) {
-  const store = cookies();
-  store.set(CART_COOKIE, JSON.stringify(cart), {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 7,
-  });
+function toPositiveInt(value: unknown, fallback = 1) {
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(1, Math.trunc(n));
 }
 
 export async function POST(req: Request) {
-  const form = await req.formData();
+  try {
+    const form = await req.formData();
 
-  const cardId = String(form.get("cardId") || "").trim();
-  // accept either qty or quantity to be safe
-  const qtyRaw = form.get("qty") ?? form.get("quantity");
-  const requestedQty = Math.max(1, Number(qtyRaw || 1));
+    const cardId = String(form.get("cardId") || "").trim();
+    // accept either qty or quantity to be safe
+    const qtyRaw = form.get("qty") ?? form.get("quantity");
+    const requestedQty = toPositiveInt(qtyRaw, 1);
 
-  if (!cardId) {
-    return NextResponse.redirect(new URL("/cart?error=missing-cardId", req.url));
+    if (!cardId) {
+      return redirectToCart(req, "error=missing-cardId");
+    }
+
+    const cookieStore = await cookies();
+    const cart = getCartFromCookies(cookieStore);
+
+    // Preserve existing behavior: if item isn't already in cart, no-op
+    const exists = cart.items.some((it) => it.cardId === cardId);
+    if (!exists) {
+      return redirectToCart(req);
+    }
+
+    await dbConnect();
+
+    const card = await Card.findById(cardId).lean();
+    if (!card) return redirectToCart(req, "error=missing-item");
+
+    const inventoryType = ((card as any).inventoryType || "single") as "single" | "bulk";
+    const stockRaw = (card as any).stock;
+    const stock = typeof stockRaw === "number" && Number.isFinite(stockRaw) ? Math.trunc(stockRaw) : 0;
+
+    let finalQty = 1;
+
+    if (inventoryType === "single") {
+      finalQty = 1;
+    } else {
+      // bulk: clamp to available stock (preserve your existing behavior)
+      const maxQty = Math.max(0, stock);
+      finalQty = Math.min(requestedQty, Math.max(1, maxQty || 1));
+    }
+
+    setCartItem(cart, cardId, finalQty, Date.now());
+    saveCartToCookies(cookieStore, cart);
+
+    return redirectToCart(req);
+  } catch {
+    // Cart update should not hard 500 the UX
+    return redirectToCart(req, "error=cart-update-failed");
   }
-
-  const store = cookies();
-  const cart = safeParseCart(store.get(CART_COOKIE)?.value);
-  if (!cart) return NextResponse.redirect(new URL("/cart", req.url));
-
-  await dbConnect();
-
-  const card = await Card.findById(cardId).lean();
-  if (!card) return NextResponse.redirect(new URL("/cart?error=missing-item", req.url));
-
-  const inventoryType = (card as any).inventoryType || "single";
-  const stock = typeof (card as any).stock === "number" ? (card as any).stock : 0;
-
-  const idx = cart.items.findIndex((it) => it.cardId === cardId);
-  if (idx < 0) return NextResponse.redirect(new URL("/cart", req.url));
-
-  if (inventoryType === "single") {
-    cart.items[idx].qty = 1;
-  } else {
-    // bulk: clamp to available stock
-    const maxQty = Math.max(0, stock);
-    cart.items[idx].qty = Math.min(requestedQty, Math.max(1, maxQty || 1));
-  }
-
-  cart.updatedAt = Date.now();
-  writeCart(cart);
-
-  return NextResponse.redirect(new URL("/cart", req.url));
 }
