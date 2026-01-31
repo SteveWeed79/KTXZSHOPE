@@ -19,8 +19,8 @@ export function getStripe(): Stripe | null {
   if (!cachedStripe) {
     cachedStripe = new Stripe(secretKey, {
       // Use a pinned API version once you have Stripe set up.
-      // This value is valid, but you can update it later from Stripe Workbench.
-      apiVersion: "2025-01-27.acacia",
+      // This value is valid for the currently installed Stripe SDK types.
+      apiVersion: "2026-01-28.clover",
     });
   }
 

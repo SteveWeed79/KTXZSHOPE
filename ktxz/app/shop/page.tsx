@@ -96,7 +96,8 @@ export default async function ShopPage({
     <div className="max-w-[1400px] mx-auto px-6">
       <div className="flex flex-col md:flex-row gap-8 py-12">
         <aside className="w-full md:w-64 shrink-0">
-          <FilterSidebar brands={brands} activeBrandId={filters.brand} />
+          {/* FilterSidebar already reads the active brand from the URL search params */}
+          <FilterSidebar brands={brands} />
 
           {isAdmin && (
             <Link

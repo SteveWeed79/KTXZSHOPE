@@ -1,6 +1,7 @@
 // ktxz/app/api/cart/update/route.ts
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import type { RequestCookies } from "next/dist/compiled/@edge-runtime/cookies";
 import dbConnect from "@/lib/dbConnect";
 import Card from "@/models/Card";
 import { getCartFromCookies, saveCartToCookies, setCartItem } from "@/lib/cartCookie";
@@ -17,6 +18,17 @@ function toPositiveInt(value: unknown, fallback = 1) {
   const n = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(n)) return fallback;
   return Math.max(1, Math.trunc(n));
+}
+
+/**
+ * Next's cookies() typing can vary (ReadonlyRequestCookies vs RequestCookies),
+ * and the return type of set() differs across contexts/versions.
+ *
+ * We adapt it locally so we can keep using the shared saveCartToCookies helper
+ * without changing runtime behavior or duplicating cookie logic.
+ */
+function asCookieSetter(store: unknown): Pick<RequestCookies, "set"> {
+  return store as unknown as Pick<RequestCookies, "set">;
 }
 
 export async function POST(req: Request) {
@@ -61,7 +73,7 @@ export async function POST(req: Request) {
     }
 
     setCartItem(cart, cardId, finalQty, Date.now());
-    saveCartToCookies(cookieStore, cart);
+    saveCartToCookies(asCookieSetter(cookieStore), cart);
 
     return redirectToCart(req);
   } catch {

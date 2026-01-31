@@ -2,40 +2,58 @@ import dbConnect from "@/lib/dbConnect";
 import Card from "@/models/Card";
 import Link from "next/link";
 
-export default async function SearchPage({ 
-  searchParams 
-}: { 
-  searchParams: Promise<{ q: string }> 
+type SearchCard = {
+  _id: any; // mongoose ObjectId in practice; only used for toString()
+  name: string;
+};
+
+export default async function SearchPage({
+  searchParams,
+}: {
+  searchParams: { q?: string };
 }) {
   await dbConnect();
-  const { q } = await searchParams;
 
-  // Search MongoDB for card names containing the query (case-insensitive)
-  const results = await Card.find({
-    name: { $regex: q, $options: "i" }
-  }).populate('brand');
+  const q = (searchParams?.q || "").trim();
+
+  const results =
+    q.length === 0
+      ? ([] as SearchCard[])
+      : ((await Card.find({
+          $or: [
+            { name: { $regex: q, $options: "i" } },
+            { set: { $regex: q, $options: "i" } },
+            { rarity: { $regex: q, $options: "i" } },
+          ],
+        })
+          .limit(50)
+          .lean()) as SearchCard[]);
 
   return (
-    <main className="min-h-screen bg-black text-white p-12">
-      <h1 className="text-4xl font-bold mb-8">
-        Results for: <span className="text-green-500">"{q}"</span>
+    <main className="min-h-screen bg-black text-white px-6 py-16 max-w-4xl mx-auto">
+      <h1 className="text-3xl font-black tracking-tight uppercase mb-2">
+        Search Results
       </h1>
+      <p className="text-gray-500 text-sm mb-10">
+        Showing results for:{" "}
+        <span className="font-mono text-gray-300">{q || "(empty)"}</span>
+      </p>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {results.length === 0 ? (
-          <p className="text-gray-500">No cards found matching your search.</p>
-        ) : (
-          results.map((card) => (
+      {q.length === 0 ? (
+        <p className="text-gray-500">Enter a search term.</p>
+      ) : results.length === 0 ? (
+        <p className="text-gray-500">No cards found matching your search.</p>
+      ) : (
+        <div className="space-y-4">
+          {results.map((card) => (
             <Link key={card._id.toString()} href={`/card/${card._id}`}>
-               <div className="p-4 border border-gray-800 rounded-xl bg-gray-900/50 hover:border-green-500 transition-all">
-                 <h2 className="font-bold">{card.name}</h2>
-                 <p className="text-green-500">${card.price}</p>
-                 <p className="text-xs text-gray-500">{card.brand.name}</p>
-               </div>
+              <div className="p-4 border border-gray-800 rounded-xl bg-gray-900/50 hover:border-green-500 transition-all">
+                <h2 className="font-bold">{card.name}</h2>
+              </div>
             </Link>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
     </main>
   );
 }

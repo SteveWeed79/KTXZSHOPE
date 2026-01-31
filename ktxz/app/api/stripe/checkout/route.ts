@@ -29,7 +29,8 @@ export async function POST(req: Request) {
     const siteUrl = mustGetEnv("NEXTAUTH_URL"); // you already use this for password reset links
 
     const stripe = new Stripe(stripeSecret, {
-      apiVersion: "2025-01-27.acacia",
+      // NOTE: Must match the Stripe SDK's allowed literal type union for apiVersion.
+      apiVersion: "2026-01-28.clover",
     });
 
     const body = (await req.json()) as CheckoutBody;
@@ -48,7 +49,10 @@ export async function POST(req: Request) {
       const qty = Math.max(1, Number(item.quantity || 1));
 
       if (!cardId) {
-        return NextResponse.json({ error: "Invalid cart item (missing cardId)." }, { status: 400 });
+        return NextResponse.json(
+          { error: "Invalid cart item (missing cardId)." },
+          { status: 400 }
+        );
       }
 
       const card = await Card.findById(cardId).populate("brand");
@@ -102,7 +106,9 @@ export async function POST(req: Request) {
       }
       if (qty > stock) {
         return NextResponse.json(
-          { error: `Not enough stock for ${card.name}. Requested ${qty}, available ${stock}.` },
+          {
+            error: `Not enough stock for ${card.name}. Requested ${qty}, available ${stock}.`,
+          },
           { status: 409 }
         );
       }

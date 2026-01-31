@@ -2,6 +2,7 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import mongoose from "mongoose";
 import dbConnect from "@/lib/dbConnect";
 import Card from "@/models/Card";
 import { auth } from "@/auth";
@@ -24,14 +25,18 @@ function getSiteUrl() {
 
 /**
  * Compute total reserved qty per cardId for active, unexpired reservations.
- * Works whether Reservation.items[*].cardId is stored as string or ObjectId
- * because we always normalize map keys using String(_id).
+ * Canonical Reservation shape is: items[*] = { card: ObjectId, quantity: number }.
  */
 async function getActiveReservedQtyByCardId(cardIds: string[], now: Date) {
-  if (cardIds.length === 0) return new Map<string, number>();
+  const map = new Map<string, number>();
+  if (cardIds.length === 0) return map;
 
-  // Mongoose aggregate is tolerant here; if cardId is ObjectId in Reservation,
-  // it will still group by ObjectId and we normalize to string.
+  const objectIds = cardIds
+    .filter((id) => mongoose.Types.ObjectId.isValid(id))
+    .map((id) => new mongoose.Types.ObjectId(id));
+
+  if (objectIds.length === 0) return map;
+
   const rows = await Reservation.aggregate([
     {
       $match: {
@@ -42,21 +47,21 @@ async function getActiveReservedQtyByCardId(cardIds: string[], now: Date) {
     { $unwind: "$items" },
     {
       $match: {
-        "items.cardId": { $in: cardIds },
+        "items.card": { $in: objectIds },
       },
     },
     {
       $group: {
-        _id: "$items.cardId",
-        qty: { $sum: "$items.qty" },
+        _id: "$items.card",
+        qty: { $sum: "$items.quantity" },
       },
     },
   ]);
 
-  const map = new Map<string, number>();
   for (const r of rows) {
     map.set(String(r._id), Number(r.qty || 0));
   }
+
   return map;
 }
 
@@ -74,9 +79,14 @@ export async function createCheckoutSession() {
     redirect("/cart");
   }
 
+  // Cart cookie stores cardId as a string; validate before passing into mongoose queries.
   const ids = items.map((i) => i.cardId).filter(Boolean);
+  const validIds = ids.filter((id) => mongoose.Types.ObjectId.isValid(id));
+  if (validIds.length !== ids.length) {
+    redirect("/cart?error=invalid-item");
+  }
 
-  const cards = await Card.find({ _id: { $in: ids } }).populate("brand").lean();
+  const cards = await Card.find({ _id: { $in: validIds } }).populate("brand").lean();
 
   const cardsById = new Map<string, any>();
   for (const c of cards) cardsById.set(String(c._id), c);
@@ -85,10 +95,7 @@ export async function createCheckoutSession() {
   const expiresAt = new Date(now.getTime() + HOLD_MINUTES * 60 * 1000);
 
   // Prevent oversells by accounting for other active holds
-  const reservedQtyByCardId = await getActiveReservedQtyByCardId(ids, now);
-
-  // Normalize what we intend to reserve (stored in Reservation.items)
-  const toReserve: Array<{ cardId: string; qty: number; inventoryType: "single" | "bulk" }> = [];
+  const reservedQtyByCardId = await getActiveReservedQtyByCardId(validIds, now);
 
   const lineItems: Array<{
     price_data: {
@@ -103,6 +110,9 @@ export async function createCheckoutSession() {
     };
     quantity: number;
   }> = [];
+
+  // Reservation items in canonical shape: { card, quantity }
+  const reservationItems: Array<{ card: mongoose.Types.ObjectId; quantity: number }> = [];
 
   for (const it of items) {
     const card = cardsById.get(it.cardId);
@@ -140,7 +150,7 @@ export async function createCheckoutSession() {
     const qty = isBulk ? qtyRequested : 1;
     const unitAmount = Math.round(price * 100);
 
-    toReserve.push({ cardId: String(card._id), qty, inventoryType });
+    reservationItems.push({ card: new mongoose.Types.ObjectId(String(card._id)), quantity: qty });
 
     lineItems.push({
       price_data: {
@@ -162,25 +172,28 @@ export async function createCheckoutSession() {
     });
   }
 
-  if (!toReserve.length) redirect("/cart");
+  if (!reservationItems.length) redirect("/cart");
 
   const siteUrl = getSiteUrl();
   const session = await auth();
   const userId = (session?.user as any)?.id ? String((session?.user as any).id) : "";
 
-  // If user clicks multiple times, cancel previous active holds for this cartId
+  const holderType: "user" | "guest" = userId ? "user" : "guest";
+  const holderKey = userId || cart.id;
+
+  // If user clicks multiple times, cancel previous active holds for this holderKey
   await Reservation.updateMany(
-    { cartId: cart.id, status: "active" },
+    { holderType, holderKey, status: "active" },
     { $set: { status: "cancelled" } }
   );
 
   // 1) Create Reservation (the hold)
   const reservation = await Reservation.create({
-    cartId: cart.id,
-    userId: userId || undefined,
+    holderType,
+    holderKey,
     status: "active",
     expiresAt,
-    items: toReserve.map((x) => ({ cardId: x.cardId, qty: x.qty })),
+    items: reservationItems,
   });
 
   // 2) Create Stripe Checkout Session (attach reservationId)

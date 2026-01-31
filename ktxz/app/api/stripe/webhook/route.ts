@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import dbConnect from "@/lib/dbConnect";
 import mongoose from "mongoose";
+import type { Collection } from "mongodb";
 import Card from "@/models/Card";
 import Order from "@/models/Order";
 import User from "@/models/User";
@@ -19,9 +20,9 @@ function centsToDollars(cents: number | null | undefined) {
   return Math.round(n) / 100;
 }
 
+// IMPORTANT: do NOT include `name` here; name is set by the caller.
 function normalizeStripeAddress(a: Stripe.Address | null | undefined) {
   return {
-    name: "",
     line1: a?.line1 ?? "",
     line2: a?.line2 ?? "",
     city: a?.city ?? "",
@@ -31,15 +32,33 @@ function normalizeStripeAddress(a: Stripe.Address | null | undefined) {
   };
 }
 
+type StripeEventDoc = {
+  _id: string; // Stripe event id
+  claimedAt: Date;
+};
+
+function isStripeProduct(p: Stripe.Product | string | null | undefined): p is Stripe.Product {
+  return !!p && typeof p === "object";
+}
+
 async function claimStripeEventOnce(eventId: string) {
-  // Collection: stripe_events (simple idempotency gate)
-  const col = mongoose.connection.collection("stripe_events");
-  const res = await col.findOneAndUpdate(
+  // Store Stripe event IDs as string _id (idempotency gate)
+  const col = mongoose.connection.collection("stripe_events") as Collection<StripeEventDoc>;
+
+  // Use updateOne+upsert to avoid findOneAndUpdate typing differences across driver overloads.
+  const res = await col.updateOne(
     { _id: eventId },
     { $setOnInsert: { _id: eventId, claimedAt: new Date() } },
-    { upsert: true, returnDocument: "before" }
+    { upsert: true }
   );
-  return { alreadyClaimed: !!res.value };
+
+  // If we inserted (upserted) a doc, it was NOT previously claimed.
+  const upsertedCount =
+    typeof (res as any).upsertedCount === "number" ? (res as any).upsertedCount : undefined;
+  const upsertedId = (res as any).upsertedId;
+
+  const inserted = upsertedCount !== undefined ? upsertedCount > 0 : !!upsertedId;
+  return { alreadyClaimed: !inserted };
 }
 
 async function markCardsSoldOrDecrementStock(items: Array<{ cardId: string; qty: number }>) {
@@ -47,7 +66,7 @@ async function markCardsSoldOrDecrementStock(items: Array<{ cardId: string; qty:
     const card = await Card.findById(it.cardId);
     if (!card) continue;
 
-    const inventoryType = (card as any).inventoryType || "single"; // single | bulk
+    const inventoryType = ((card as any).inventoryType || "single") as "single" | "bulk";
     const qty = Math.max(1, Number(it.qty || 1));
 
     if (inventoryType === "bulk") {
@@ -81,7 +100,7 @@ export async function POST(req: Request) {
     const webhookSecret = mustGetEnv("STRIPE_WEBHOOK_SECRET");
 
     const stripe = new Stripe(stripeSecret, {
-      apiVersion: "2025-01-27.acacia",
+      apiVersion: "2026-01-28.clover",
     });
 
     const sig = req.headers.get("stripe-signature");
@@ -114,8 +133,6 @@ export async function POST(req: Request) {
     }
 
     const session = event.data.object as Stripe.Checkout.Session;
-
-    // Only finalize as paid when Stripe says paid
     const paid = session.payment_status === "paid";
 
     const sessionId = session.id;
@@ -123,19 +140,14 @@ export async function POST(req: Request) {
       typeof session.payment_intent === "string" ? session.payment_intent : "";
     const customerId = typeof session.customer === "string" ? session.customer : "";
 
-    const emailRaw =
-      session.customer_details?.email || session.customer_email || "";
+    const emailRaw = session.customer_details?.email || session.customer_email || "";
     const email = (emailRaw || "").toLowerCase().trim();
 
     if (!email) {
-      // Extremely rare, but keep it safe; Stripe should provide email for guest checkout
-      return NextResponse.json(
-        { error: "Stripe session missing customer email." },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Stripe session missing customer email." }, { status: 400 });
     }
 
-    // If order already exists for this session, do nothing (extra safety)
+    // Extra safety: if order already exists for this session, do nothing
     const existing = await Order.findOne({ stripeCheckoutSessionId: sessionId });
     if (existing) {
       return NextResponse.json({ received: true, alreadyRecorded: true });
@@ -161,21 +173,15 @@ export async function POST(req: Request) {
       const qty = li.quantity ?? 1;
 
       const product = li.price?.product as Stripe.Product | string | null | undefined;
-      const metadata =
-        typeof product === "object" && product && "metadata" in product ? product.metadata : {};
+      const productObj = isStripeProduct(product) ? product : null;
 
-      const cardId = (metadata?.cardId as string) || "";
-      const name =
-        (typeof product === "object" && product?.name) ||
-        li.description ||
-        "Item";
-      const image =
-        (typeof product === "object" &&
-          Array.isArray(product.images) &&
-          product.images[0]) ||
-        "";
-      const brandName = (metadata?.brand as string) || "";
-      const rarity = (metadata?.rarity as string) || "";
+      const metadata = productObj?.metadata ?? {};
+      const cardId = (metadata.cardId as string) || "";
+
+      const name = productObj?.name || li.description || "Item";
+      const image = productObj?.images?.[0] || "";
+      const brandName = (metadata.brand as string) || "";
+      const rarity = (metadata.rarity as string) || "";
 
       // Prefer Stripe unit_amount (cents) if present, else derive from amount_total/qty
       const unitAmountCents =
@@ -211,23 +217,29 @@ export async function POST(req: Request) {
     const user = await User.findOne({ email }).select("_id").lean();
 
     // Addresses
+    // Stripe's TS types for Checkout.Session vary by SDK version; some don't include shipping_details.
+    // Runtime can still provide it, so we safely access it via `any`.
+    const shippingDetails = (session as any).shipping_details as
+      | { name?: string; address?: Stripe.Address | null }
+      | null
+      | undefined;
+
     const shippingAddress = {
-      name: session.shipping_details?.name ?? "",
-      ...normalizeStripeAddress(session.shipping_details?.address),
+      name: shippingDetails?.name ?? "",
+      ...normalizeStripeAddress(shippingDetails?.address ?? null),
     };
 
     const billingAddress = {
       name: session.customer_details?.name ?? "",
-      ...normalizeStripeAddress(session.customer_details?.address),
+      ...normalizeStripeAddress(session.customer_details?.address ?? null),
     };
 
-    // Amounts in dollars (your Order schema expects dollars)
+    // Amounts in dollars (Order schema expects dollars)
     const subtotal = centsToDollars(session.amount_subtotal);
     const total = centsToDollars(session.amount_total);
     const tax = centsToDollars(session.total_details?.amount_tax ?? 0);
     const shipping = centsToDollars(session.total_details?.amount_shipping ?? 0);
 
-    // Create order
     const order = await Order.create({
       user: user?._id,
       email,
@@ -253,7 +265,6 @@ export async function POST(req: Request) {
       status: paid ? "paid" : "pending",
       paidAt: paid ? new Date() : undefined,
 
-      // Shippo not configured yet: leave tracking/carrier blank and let admin fulfill later
       trackingNumber: "",
       carrier: "",
       notes: paid
@@ -263,9 +274,7 @@ export async function POST(req: Request) {
 
     // Inventory updates only if paid
     if (paid) {
-      await markCardsSoldOrDecrementStock(
-        purchased.map((p) => ({ cardId: p.cardId, qty: p.qty }))
-      );
+      await markCardsSoldOrDecrementStock(purchased.map((p) => ({ cardId: p.cardId, qty: p.qty })));
     }
 
     return NextResponse.json({ received: true, orderId: order._id.toString(), paid });

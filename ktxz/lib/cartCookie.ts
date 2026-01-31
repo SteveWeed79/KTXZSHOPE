@@ -144,10 +144,18 @@ export function clearCart(cart: CookieCart, now = Date.now()): CookieCart {
  *  Cookie I/O helpers
  *  ------------------------- */
 
-function cookieOptions() {
+type CookieWriteOptions = {
+  httpOnly: boolean;
+  sameSite: "lax" | "strict" | "none";
+  secure: boolean;
+  path: string;
+  maxAge: number;
+};
+
+function cookieOptions(): CookieWriteOptions {
   return {
     httpOnly: true,
-    sameSite: "lax" as const,
+    sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge: 60 * 60 * 24 * 7, // 7 days
@@ -176,15 +184,25 @@ export function saveCartToCookies(
     updatedAt: Number.isFinite(cart.updatedAt) ? cart.updatedAt : Date.now(),
   };
 
-  cookieStore.set(CART_COOKIE, JSON.stringify(payload), cookieOptions());
+  // Use object-form set() to support Next's differing cookie store overloads.
+  cookieStore.set({
+    name: CART_COOKIE,
+    value: JSON.stringify(payload),
+    ...cookieOptions(),
+  } as any);
 }
 
 /**
  * Remove the cookie entirely.
  */
 export function clearCartCookie(cookieStore: Pick<RequestCookies, "set">): void {
-  cookieStore.set(CART_COOKIE, "", {
-    ...cookieOptions(),
-    maxAge: 0,
-  });
+  // Put maxAge into a spread object so TS doesn't treat it as an "excess property"
+  // on the object literal passed to the RequestCookie overload.
+  const opts = { ...cookieOptions(), maxAge: 0 };
+
+  cookieStore.set({
+    name: CART_COOKIE,
+    value: "",
+    ...opts,
+  } as any);
 }
