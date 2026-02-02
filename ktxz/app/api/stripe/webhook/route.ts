@@ -1,13 +1,33 @@
-import { NextResponse } from "next/server";
+/**
+ * ============================================================================
+ * FILE: app/api/stripe/webhook/route.ts
+ * STATUS: MODIFIED (Replace existing file)
+ * ============================================================================
+ * 
+ * Stripe Webhook Handler with Automatic Email Notifications
+ * - Creates orders in database
+ * - Updates inventory
+ * - Sends confirmation emails automatically
+ */
+
+import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
+import { Resend } from "resend";
 import dbConnect from "@/lib/dbConnect";
 import mongoose from "mongoose";
 import type { Collection } from "mongodb";
 import Card from "@/models/Card";
 import Order from "@/models/Order";
 import User from "@/models/User";
+import { generateOrderConfirmationEmail } from "@/lib/emails/orderConfirmation";
 
 export const runtime = "nodejs";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+const EMAIL_FROM = process.env.EMAIL_FROM || "onboarding@resend.dev";
+const EMAIL_FROM_NAME = process.env.EMAIL_FROM_NAME || "KTXZ SHOP";
+const SITE_URL = process.env.NEXTAUTH_URL || process.env.SITE_URL || "http://localhost:3000";
 
 function mustGetEnv(name: string) {
   const v = process.env[name];
@@ -20,7 +40,6 @@ function centsToDollars(cents: number | null | undefined) {
   return Math.round(n) / 100;
 }
 
-// IMPORTANT: do NOT include `name` here; name is set by the caller.
 function normalizeStripeAddress(a: Stripe.Address | null | undefined) {
   return {
     line1: a?.line1 ?? "",
@@ -33,7 +52,7 @@ function normalizeStripeAddress(a: Stripe.Address | null | undefined) {
 }
 
 type StripeEventDoc = {
-  _id: string; // Stripe event id
+  _id: string;
   claimedAt: Date;
 };
 
@@ -42,17 +61,14 @@ function isStripeProduct(p: Stripe.Product | string | null | undefined): p is St
 }
 
 async function claimStripeEventOnce(eventId: string) {
-  // Store Stripe event IDs as string _id (idempotency gate)
   const col = mongoose.connection.collection("stripe_events") as Collection<StripeEventDoc>;
 
-  // Use updateOne+upsert to avoid findOneAndUpdate typing differences across driver overloads.
   const res = await col.updateOne(
     { _id: eventId },
     { $setOnInsert: { _id: eventId, claimedAt: new Date() } },
     { upsert: true }
   );
 
-  // If we inserted (upserted) a doc, it was NOT previously claimed.
   const upsertedCount =
     typeof (res as any).upsertedCount === "number" ? (res as any).upsertedCount : undefined;
   const upsertedId = (res as any).upsertedId;
@@ -94,6 +110,39 @@ async function markCardsSoldOrDecrementStock(items: Array<{ cardId: string; qty:
   }
 }
 
+async function sendOrderConfirmationEmail(order: any) {
+  try {
+    const orderNumber = order.orderNumber || order._id.toString().slice(-8).toUpperCase();
+    
+    const emailContent = generateOrderConfirmationEmail(
+      {
+        ...order,
+        orderNumber,
+      },
+      SITE_URL
+    );
+
+    const result = await resend.emails.send({
+      from: `${EMAIL_FROM_NAME} <${EMAIL_FROM}>`,
+      to: order.email,
+      subject: `Order Confirmation #${orderNumber} - KTXZ`,
+      html: emailContent.html,
+      text: emailContent.text,
+    });
+
+    if (result.data) {
+      console.log(`✅ Confirmation email sent to ${order.email}:`, result.data.id);
+      return true;
+    } else {
+      console.error("❌ Failed to send confirmation email:", result.error);
+      return false;
+    }
+  } catch (error) {
+    console.error("❌ Error sending confirmation email:", error);
+    return false;
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const stripeSecret = mustGetEnv("STRIPE_SECRET_KEY");
@@ -122,7 +171,7 @@ export async function POST(req: Request) {
 
     await dbConnect();
 
-    // Idempotency gate (prevents double-processing)
+    // Idempotency gate
     const { alreadyClaimed } = await claimStripeEventOnce(event.id);
     if (alreadyClaimed) {
       return NextResponse.json({ received: true, deduped: true });
@@ -147,13 +196,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Stripe session missing customer email." }, { status: 400 });
     }
 
-    // Extra safety: if order already exists for this session, do nothing
+    // Check if order already exists
     const existing = await Order.findOne({ stripeCheckoutSessionId: sessionId });
     if (existing) {
       return NextResponse.json({ received: true, alreadyRecorded: true });
     }
 
-    // Pull line items to build Order.items (and to get cardId from metadata)
+    // Pull line items
     const lineItems = await stripe.checkout.sessions.listLineItems(sessionId, {
       expand: ["data.price.product"],
       limit: 100,
@@ -166,7 +215,7 @@ export async function POST(req: Request) {
       image: string;
       brandName: string;
       rarity: string;
-      unitPrice: number; // dollars
+      unitPrice: number;
     }> = [];
 
     for (const li of lineItems.data) {
@@ -183,7 +232,6 @@ export async function POST(req: Request) {
       const brandName = (metadata.brand as string) || "";
       const rarity = (metadata.rarity as string) || "";
 
-      // Prefer Stripe unit_amount (cents) if present, else derive from amount_total/qty
       const unitAmountCents =
         typeof li.price?.unit_amount === "number"
           ? li.price.unit_amount
@@ -213,12 +261,10 @@ export async function POST(req: Request) {
       );
     }
 
-    // Link to a user account if the email exists
+    // Link to user account
     const user = await User.findOne({ email }).select("_id").lean();
 
     // Addresses
-    // Stripe's TS types for Checkout.Session vary by SDK version; some don't include shipping_details.
-    // Runtime can still provide it, so we safely access it via `any`.
     const shippingDetails = (session as any).shipping_details as
       | { name?: string; address?: Stripe.Address | null }
       | null
@@ -234,12 +280,13 @@ export async function POST(req: Request) {
       ...normalizeStripeAddress(session.customer_details?.address ?? null),
     };
 
-    // Amounts in dollars (Order schema expects dollars)
+    // Amounts in dollars
     const subtotal = centsToDollars(session.amount_subtotal);
     const total = centsToDollars(session.amount_total);
     const tax = centsToDollars(session.total_details?.amount_tax ?? 0);
     const shipping = centsToDollars(session.total_details?.amount_shipping ?? 0);
 
+    // Create order
     const order = await Order.create({
       user: user?._id,
       email,
@@ -268,17 +315,28 @@ export async function POST(req: Request) {
       trackingNumber: "",
       carrier: "",
       notes: paid
-        ? "Paid via Stripe. Fulfillment pending (Shippo not configured yet)."
+        ? "Paid via Stripe. Awaiting fulfillment."
         : "Checkout completed but not marked paid yet.",
     });
 
-    // Inventory updates only if paid
+    // Update inventory if paid
     if (paid) {
       await markCardsSoldOrDecrementStock(purchased.map((p) => ({ cardId: p.cardId, qty: p.qty })));
     }
 
-    return NextResponse.json({ received: true, orderId: order._id.toString(), paid });
+    // Send confirmation email automatically if paid
+    if (paid) {
+      await sendOrderConfirmationEmail(order.toObject());
+    }
+
+    return NextResponse.json({ 
+      received: true, 
+      orderId: order._id.toString(), 
+      paid,
+      emailSent: paid 
+    });
   } catch (err: any) {
+    console.error("Webhook error:", err);
     return NextResponse.json({ error: err?.message || "Webhook error" }, { status: 500 });
   }
 }
