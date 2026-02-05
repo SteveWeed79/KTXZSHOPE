@@ -1,3 +1,13 @@
+/**
+ * ============================================================================
+ * FILE: app/shop/page.tsx
+ * STATUS: MODIFIED (Remove redundant admin link from sidebar)
+ * ============================================================================
+ * 
+ * CHANGES:
+ * - Removed admin "Command Center" link from FilterSidebar area
+ */
+
 import dbConnect from "@/lib/dbConnect";
 import Card from "@/models/Card";
 import Brand from "@/models/Brand";
@@ -14,11 +24,6 @@ export default async function ShopPage({
   await dbConnect();
   const filters = await searchParams;
   const session = await auth();
-
-  // Admin link visibility
-  const isAdmin =
-    session?.user?.email === "steveweed1979@gmail.com" ||
-    (session?.user as any)?.role === "admin";
 
   const now = new Date();
 
@@ -37,7 +42,7 @@ export default async function ShopPage({
       { $or: [{ status: { $exists: false } }, { status: "active" }] },
       {
         $or: [
-          { inventoryType: { $exists: false } }, // legacy -> treat as single
+          { inventoryType: { $exists: false } },
           { inventoryType: "single" },
           { inventoryType: "bulk", stock: { $gt: 0 } },
         ],
@@ -46,14 +51,14 @@ export default async function ShopPage({
   };
 
   /**
-   * Vault visibility rules (your existing logic):
+   * Vault visibility rules:
    * Show items NOT currently active in the Vault.
    */
   const vaultVisibilityFilter: any = {
     $or: [
-      { isVault: { $ne: true } }, // standard items
-      { vaultExpiryDate: { $lt: now } }, // vault finished
-      { vaultReleaseDate: { $gt: now } }, // scheduled for future vault
+      { isVault: { $ne: true } },
+      { vaultExpiryDate: { $lt: now } },
+      { vaultReleaseDate: { $gt: now } },
     ],
   };
 
@@ -96,19 +101,9 @@ export default async function ShopPage({
     <div className="max-w-[1400px] mx-auto px-6">
       <div className="flex flex-col md:flex-row gap-8 py-12">
         <aside className="w-full md:w-64 shrink-0">
-          {/* FilterSidebar already reads the active brand from the URL search params */}
           <FilterSidebar brands={brands} />
 
-          {isAdmin && (
-            <Link
-              href="/admin"
-              className="mt-8 flex items-center justify-center p-4 border border-dashed border-red-900/50 rounded-xl group hover:border-red-600 transition-all"
-            >
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-red-900 group-hover:text-red-500">
-                [ Command Center ]
-              </span>
-            </Link>
-          )}
+          {/* REMOVED: Admin link - now only in Navbar */}
         </aside>
 
         <section className="flex-1">

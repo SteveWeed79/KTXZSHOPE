@@ -1,15 +1,28 @@
-// ktxz/app/cart/page.tsx
+/**
+ * ============================================================================
+ * FILE: ktxz/app/cart/page.tsx
+ * STATUS: MODIFIED
+ * ============================================================================
+ * 
+ * Cart page with session-aware label
+ * - Shows "Your cart" for logged-in users
+ * - Shows "Guest cart (cookie-based)" for guests
+ * - Note: Cart is still cookie-based for everyone (DB cart not implemented)
+ */
+
 import Link from "next/link";
 import { cookies } from "next/headers";
 import dbConnect from "@/lib/dbConnect";
 import Card from "@/models/Card";
 import { CART_COOKIE, getCartFromCookies } from "@/lib/cartCookie";
+import { auth } from "@/auth";
 
 function money(n: number) {
   return `$${n.toFixed(2)}`;
 }
 
 export default async function CartPage() {
+  const session = await auth();
   const cookieStore = await cookies();
 
   // ✅ Canonical + backward-compatible parsing (handles legacy array cookies too)
@@ -70,7 +83,7 @@ export default async function CartPage() {
           Cart
         </h1>
         <p className="text-gray-500 font-mono text-[10px] tracking-[0.3em] uppercase mt-2">
-          Guest cart (cookie-based)
+          {session ? "Your cart" : "Guest cart (cookie-based)"}
         </p>
       </header>
 

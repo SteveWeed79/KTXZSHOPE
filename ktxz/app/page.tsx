@@ -1,3 +1,13 @@
+/**
+ * ============================================================================
+ * FILE: app/page.tsx
+ * STATUS: MODIFIED (Remove redundant admin link)
+ * ============================================================================
+ * 
+ * CHANGES:
+ * - Removed admin "Command Center" link (keep only in Navbar)
+ */
+
 import dbConnect from "@/lib/dbConnect";
 import Card from "@/models/Card";
 import Link from "next/link";
@@ -14,8 +24,6 @@ export default async function Home() {
   await dbConnect();
 
   const session = await auth();
-  const userEmail = session?.user?.email;
-  const adminEmail = process.env.ADMIN_EMAIL;
   const now = new Date();
 
   // 1. Fetch active vault cards
@@ -29,7 +37,7 @@ export default async function Home() {
     .limit(8)
     .lean();
 
-  // 2. RESTORED: Collect timestamps for auto-refresh
+  // 2. Collect timestamps for auto-refresh
   const allVaultTimestamps =
     (await Card.find({ isVault: true }, "vaultReleaseDate vaultExpiryDate").lean()) as VaultTimestampsLean[];
 
@@ -41,10 +49,6 @@ export default async function Home() {
     <main className="min-h-[80vh] flex flex-col items-center text-center px-4 relative">
       <VaultAutoRefresh events={events} />
 
-      {/* BUNNY POSITIONING:
-          'fixed right-0' pins it to the actual edge of the screen.
-          Removed 'grayscale' to let the new transparent bunny's colors pop slightly.
-      */}
       <div className="fixed top-24 right-0 z-0 hidden 2xl:block pointer-events-none select-none overflow-hidden">
         <img
           src="/bunny.png"
@@ -72,16 +76,7 @@ export default async function Home() {
           )}
         </div>
 
-        {userEmail === adminEmail && (
-          <div className="pt-4">
-            <Link
-              href="/admin"
-              className="text-[10px] text-red-600 font-bold uppercase tracking-[0.3em] hover:underline"
-            >
-              [ Command Center ]
-            </Link>
-          </div>
-        )}
+        {/* REMOVED: Admin link - now only in Navbar */}
       </div>
 
       {vaultCards.length > 0 && (
