@@ -1,10 +1,18 @@
-// ktxz/app/api/cart/update/route.ts
+/**
+ * ============================================================================
+ * FILE: ktxz/app/api/cart/update/route.ts
+ * STATUS: MODIFIED (Database cart support)
+ * ============================================================================
+ * 
+ * Update cart item quantity
+ * - Supports both database carts (logged-in) and cookie carts (guests)
+ */
+
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import type { RequestCookies } from "next/dist/compiled/@edge-runtime/cookies";
 import dbConnect from "@/lib/dbConnect";
 import Card from "@/models/Card";
-import { getCartFromCookies, saveCartToCookies, setCartItem } from "@/lib/cartCookie";
+import { auth } from "@/auth";
+import { updateCartItem } from "@/lib/cartHelpers";
 
 export const runtime = "nodejs";
 
@@ -20,37 +28,19 @@ function toPositiveInt(value: unknown, fallback = 1) {
   return Math.max(1, Math.trunc(n));
 }
 
-/**
- * Next's cookies() typing can vary (ReadonlyRequestCookies vs RequestCookies),
- * and the return type of set() differs across contexts/versions.
- *
- * We adapt it locally so we can keep using the shared saveCartToCookies helper
- * without changing runtime behavior or duplicating cookie logic.
- */
-function asCookieSetter(store: unknown): Pick<RequestCookies, "set"> {
-  return store as unknown as Pick<RequestCookies, "set">;
-}
-
 export async function POST(req: Request) {
   try {
+    const session = await auth();
+    const userId = session?.user ? (session.user as any).id : null;
+
     const form = await req.formData();
 
     const cardId = String(form.get("cardId") || "").trim();
-    // accept either qty or quantity to be safe
     const qtyRaw = form.get("qty") ?? form.get("quantity");
     const requestedQty = toPositiveInt(qtyRaw, 1);
 
     if (!cardId) {
       return redirectToCart(req, "error=missing-cardId");
-    }
-
-    const cookieStore = await cookies();
-    const cart = getCartFromCookies(cookieStore);
-
-    // Preserve existing behavior: if item isn't already in cart, no-op
-    const exists = cart.items.some((it) => it.cardId === cardId);
-    if (!exists) {
-      return redirectToCart(req);
     }
 
     await dbConnect();
@@ -67,17 +57,17 @@ export async function POST(req: Request) {
     if (inventoryType === "single") {
       finalQty = 1;
     } else {
-      // bulk: clamp to available stock (preserve your existing behavior)
+      // bulk: clamp to available stock
       const maxQty = Math.max(0, stock);
       finalQty = Math.min(requestedQty, Math.max(1, maxQty || 1));
     }
 
-    setCartItem(cart, cardId, finalQty, Date.now());
-    saveCartToCookies(asCookieSetter(cookieStore), cart);
+    // Update cart (handles both database and cookie)
+    await updateCartItem(userId, cardId, finalQty);
 
     return redirectToCart(req);
-  } catch {
-    // Cart update should not hard 500 the UX
+  } catch (err) {
+    console.error("Cart update error:", err);
     return redirectToCart(req, "error=cart-update-failed");
   }
 }

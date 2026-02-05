@@ -1,45 +1,37 @@
-// ktxz/app/api/cart/route/remove/route.ts
+/**
+ * ============================================================================
+ * FILE: ktxz/app/api/cart/remove/route.ts
+ * STATUS: MODIFIED (Database cart support)
+ * ============================================================================
+ * 
+ * Remove item from cart
+ * - Supports both database carts (logged-in) and cookie carts (guests)
+ */
+
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import type { RequestCookies } from "next/dist/compiled/@edge-runtime/cookies";
-import { getCartFromCookies, removeCartItem, saveCartToCookies } from "@/lib/cartCookie";
+import { auth } from "@/auth";
+import { removeFromCart } from "@/lib/cartHelpers";
 
 export const runtime = "nodejs";
 
 function redirectBack(req: Request) {
   const referer = req.headers.get("referer");
-  // keep prior behavior: go back if possible, otherwise /cart
   return NextResponse.redirect(referer || new URL("/cart", req.url), { status: 303 });
 }
 
-/**
- * saveCartToCookies() expects a "RequestCookies-like" setter.
- * NextResponse has its own cookie jar (ResponseCookies) which *can* set cookies.
- * We adapt it locally to avoid changing the shared helper signature.
- */
-function asCookieSetter(cookieJar: unknown): Pick<RequestCookies, "set"> {
-  return cookieJar as unknown as Pick<RequestCookies, "set">;
-}
-
 export async function POST(req: Request) {
+  const session = await auth();
+  const userId = session?.user ? (session.user as any).id : null;
+
   const form = await req.formData();
   const cardId = String(form.get("cardId") || "").trim();
 
-  // If no cardId, no-op and redirect back
   if (!cardId) {
     return redirectBack(req);
   }
 
-  // Read cart from request cookies
-  const cookieStore = await cookies();
-  const cart = getCartFromCookies(cookieStore);
+  // Remove from cart (handles both database and cookie)
+  await removeFromCart(userId, cardId);
 
-  // Update cart in-memory
-  removeCartItem(cart, cardId);
-
-  // Redirect response + set cookie on the response cookie jar
-  const res = redirectBack(req);
-  saveCartToCookies(asCookieSetter(res.cookies), cart);
-
-  return res;
+  return redirectBack(req);
 }

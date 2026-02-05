@@ -1,10 +1,18 @@
+/**
+ * ============================================================================
+ * FILE: ktxz/app/checkout/success/page.tsx
+ * STATUS: MODIFIED (Database cart support)
+ * ============================================================================
+ * 
+ * Checkout success page with cart clearing for both database and cookie carts
+ */
+
 import Link from "next/link";
-import { cookies } from "next/headers";
 import { getStripe } from "@/lib/stripe";
 import dbConnect from "@/lib/dbConnect";
 import Card from "@/models/Card";
-
-const CART_COOKIE = "ktxz_cart_v1";
+import { auth } from "@/auth";
+import { clearCart } from "@/lib/cartHelpers";
 
 function money(cents: number) {
   return `$${(cents / 100).toFixed(2)}`;
@@ -61,14 +69,10 @@ export default async function CheckoutSuccessPage({
   const paid = session.payment_status === "paid";
 
   if (paid) {
-    const cookieStore = await cookies();
-    cookieStore.set(CART_COOKIE, "", {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      maxAge: 0,
-    });
+    // Clear cart (handles both database and cookie)
+    const userSession = await auth();
+    const userId = userSession?.user ? (userSession.user as any).id : null;
+    await clearCart(userId);
   }
 
   const lineItems = (session as any).line_items?.data ?? [];
@@ -188,7 +192,7 @@ export default async function CheckoutSuccessPage({
             </div>
 
             <p className="text-[9px] text-gray-700 uppercase font-mono leading-relaxed mt-6">
-              Next: Stripe webhooks → Orders DB, inventory holds, Shippo fulfillment.
+              Your cart has been cleared. Order confirmation sent to your email.
             </p>
           </aside>
         </div>

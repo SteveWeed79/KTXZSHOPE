@@ -1,20 +1,23 @@
+/**
+ * ============================================================================
+ * FILE: ktxz/app/checkout/actions.ts
+ * STATUS: MODIFIED (Database cart support)
+ * ============================================================================
+ * 
+ * Create Stripe checkout session with database cart support
+ */
+
 "use server";
 
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import mongoose from "mongoose";
 import dbConnect from "@/lib/dbConnect";
 import Card from "@/models/Card";
 import { auth } from "@/auth";
 import { getStripe } from "@/lib/stripe";
-import { getCartFromCookies } from "@/lib/cartCookie";
+import { loadCart } from "@/lib/cartHelpers";
 import Reservation from "@/models/Reservation";
 
-/**
- * Inventory hold window (MVP)
- * - We create a Reservation before Stripe redirect
- * - Webhook will later "consume" it when paid (next file after this)
- */
 const HOLD_MINUTES = 10;
 
 function getSiteUrl() {
@@ -23,10 +26,6 @@ function getSiteUrl() {
   return url.replace(/\/+$/, "");
 }
 
-/**
- * Compute total reserved qty per cardId for active, unexpired reservations.
- * Canonical Reservation shape is: items[*] = { card: ObjectId, quantity: number }.
- */
 async function getActiveReservedQtyByCardId(cardIds: string[], now: Date) {
   const map = new Map<string, number>();
   if (cardIds.length === 0) return map;
@@ -71,15 +70,17 @@ export async function createCheckoutSession() {
 
   await dbConnect();
 
-  const cookieStore = await cookies();
-  const cart = getCartFromCookies(cookieStore);
+  const session = await auth();
+  const userId = session?.user ? (session.user as any).id : null;
+
+  // Load cart from database or cookie
+  const cart = await loadCart(userId);
   const items = cart.items ?? [];
 
   if (!items.length) {
     redirect("/cart");
   }
 
-  // Cart cookie stores cardId as a string; validate before passing into mongoose queries.
   const ids = items.map((i) => i.cardId).filter(Boolean);
   const validIds = ids.filter((id) => mongoose.Types.ObjectId.isValid(id));
   if (validIds.length !== ids.length) {
@@ -94,7 +95,6 @@ export async function createCheckoutSession() {
   const now = new Date();
   const expiresAt = new Date(now.getTime() + HOLD_MINUTES * 60 * 1000);
 
-  // Prevent oversells by accounting for other active holds
   const reservedQtyByCardId = await getActiveReservedQtyByCardId(validIds, now);
 
   const lineItems: Array<{
@@ -111,7 +111,6 @@ export async function createCheckoutSession() {
     quantity: number;
   }> = [];
 
-  // Reservation items in canonical shape: { card, quantity }
   const reservationItems: Array<{ card: mongoose.Types.ObjectId; quantity: number }> = [];
 
   for (const it of items) {
@@ -133,13 +132,11 @@ export async function createCheckoutSession() {
     const qtyRequested = isBulk ? Math.max(1, Math.floor(Number(it.qty || 1))) : 1;
 
     if (inventoryType === "single") {
-      // A single is unavailable if *any* active hold exists for it.
       const alreadyReserved = reservedQtyByCardId.get(String(card._id)) ?? 0;
       if (alreadyReserved > 0) {
         redirect("/cart?error=reserved");
       }
     } else {
-      // bulk: available = stock - activeReserved
       const alreadyReserved = reservedQtyByCardId.get(String(card._id)) ?? 0;
       const available = Math.max(0, stock - alreadyReserved);
 
@@ -175,19 +172,16 @@ export async function createCheckoutSession() {
   if (!reservationItems.length) redirect("/cart");
 
   const siteUrl = getSiteUrl();
-  const session = await auth();
-  const userId = (session?.user as any)?.id ? String((session?.user as any).id) : "";
 
   const holderType: "user" | "guest" = userId ? "user" : "guest";
-  const holderKey = userId || cart.id;
+  // FIXED: Use cart.id if available (cookie cart), otherwise userId or timestamp
+  const holderKey = userId || cart.id || String(Date.now());
 
-  // If user clicks multiple times, cancel previous active holds for this holderKey
   await Reservation.updateMany(
     { holderType, holderKey, status: "active" },
     { $set: { status: "cancelled" } }
   );
 
-  // 1) Create Reservation (the hold)
   const reservation = await Reservation.create({
     holderType,
     holderKey,
@@ -196,7 +190,6 @@ export async function createCheckoutSession() {
     items: reservationItems,
   });
 
-  // 2) Create Stripe Checkout Session (attach reservationId)
   try {
     const checkoutSession = await stripe.checkout.sessions.create({
       mode: "payment",
@@ -231,18 +224,16 @@ export async function createCheckoutSession() {
       ],
 
       metadata: {
-        cartId: cart.id,
         reservationId: String(reservation._id),
         holdMinutes: String(HOLD_MINUTES),
         source: "ktxz_checkout",
-        userId,
+        userId: userId || "",
       },
 
       success_url: `${siteUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${siteUrl}/cart`,
     });
 
-    // 3) Link reservation → Stripe session id for easy webhook lookup
     await Reservation.updateOne(
       { _id: reservation._id },
       { $set: { stripeCheckoutSessionId: checkoutSession.id } }
@@ -251,7 +242,6 @@ export async function createCheckoutSession() {
     if (!checkoutSession.url) throw new Error("Stripe did not return a checkout URL.");
     redirect(checkoutSession.url);
   } catch (e) {
-    // If Stripe creation fails, release the hold
     await Reservation.updateOne({ _id: reservation._id }, { $set: { status: "cancelled" } });
     throw e;
   }

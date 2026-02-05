@@ -1,21 +1,19 @@
 /**
  * ============================================================================
  * FILE: ktxz/app/cart/page.tsx
- * STATUS: MODIFIED
+ * STATUS: MODIFIED (Database cart support)
  * ============================================================================
  * 
- * Cart page with session-aware label
- * - Shows "Your cart" for logged-in users
- * - Shows "Guest cart (cookie-based)" for guests
- * - Note: Cart is still cookie-based for everyone (DB cart not implemented)
+ * Cart page with database support for logged-in users
+ * - Logged-in users: Load from database
+ * - Guests: Load from cookie
  */
 
 import Link from "next/link";
-import { cookies } from "next/headers";
 import dbConnect from "@/lib/dbConnect";
 import Card from "@/models/Card";
-import { CART_COOKIE, getCartFromCookies } from "@/lib/cartCookie";
 import { auth } from "@/auth";
+import { loadCart } from "@/lib/cartHelpers";
 
 function money(n: number) {
   return `$${n.toFixed(2)}`;
@@ -23,10 +21,10 @@ function money(n: number) {
 
 export default async function CartPage() {
   const session = await auth();
-  const cookieStore = await cookies();
+  const userId = session?.user ? (session.user as any).id : null;
 
-  // ✅ Canonical + backward-compatible parsing (handles legacy array cookies too)
-  const cart = getCartFromCookies(cookieStore);
+  // Load cart from database or cookie
+  const cart = await loadCart(userId);
   const items = cart.items;
 
   await dbConnect();
@@ -44,7 +42,7 @@ export default async function CartPage() {
       const card = cardMap.get(ci.cardId);
       if (!card) return null;
 
-      const inventoryType = card.inventoryType || "single"; // single | bulk
+      const inventoryType = card.inventoryType || "single";
       const stock = typeof card.stock === "number" ? card.stock : 0;
       const isActive = card.isActive ?? true;
       const status = card.status ?? "active";

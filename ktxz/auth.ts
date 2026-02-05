@@ -1,3 +1,13 @@
+/**
+ * ============================================================================
+ * FILE: ktxz/auth.ts
+ * STATUS: MODIFIED (Cart merging on login)
+ * ============================================================================
+ * 
+ * Authentication configuration with cart merging
+ * - When user logs in, merge cookie cart into database cart
+ */
+
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
@@ -5,6 +15,7 @@ import bcrypt from "bcryptjs";
 import { authConfig } from "./auth.config";
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
+import { mergeCookieCartIntoUserCart } from "@/lib/cartHelpers";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -22,7 +33,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         if (!email || !password) return null;
 
-        // Fetch user and explicitly select the hidden password field [cite: 60]
         const user = await User.findOne({ email }).select("+password");
         if (!user || !user.password) return null;
 
@@ -39,15 +49,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.id = user.id;
-        // Verify admin status via DB role or Environment Variable 
         const isAdmin = 
           (user as any).role === "admin" || 
           user.email === process.env.ADMIN_EMAIL;
         
         token.role = isAdmin ? "admin" : "customer";
+
+        // IMPORTANT: Merge cookie cart into user cart on login
+        // This happens once per login session
+        try {
+          await mergeCookieCartIntoUserCart(user.id);
+        } catch (err) {
+          console.error("Cart merge error on login:", err);
+          // Don't block login if cart merge fails
+        }
       }
       return token;
     },
