@@ -22,6 +22,7 @@ import {
   clearCart as clearCookieCart,
   type CookieCart,
 } from "@/lib/cartCookie";
+import Reservation from "@/models/Reservation";
 
 export type CartItem = {
   cardId: string;
@@ -252,6 +253,19 @@ export async function mergeCookieCartIntoUserCart(userId: string): Promise<void>
 
     userCart.lastActiveAt = new Date();
     await userCart.save();
+  }
+
+  // Transfer any active guest reservations to the logged-in user
+  // This prevents "out of stock" errors when a guest starts checkout then logs in
+  if (cookieCart.id) {
+    try {
+      await Reservation.updateMany(
+        { holderKey: cookieCart.id, holderType: "guest", status: "active" },
+        { $set: { holderKey: userId, holderType: "user" } }
+      );
+    } catch (err) {
+      console.error("Failed to transfer guest reservations:", err);
+    }
   }
 
   // Clear cookie cart after successful merge

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import dbConnect from "@/lib/dbConnect";
 import Card from "@/models/Card";
+import { auth } from "@/auth";
+import { RateLimiters, rateLimitResponse } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 
@@ -25,6 +27,16 @@ type CheckoutBody = {
 
 export async function POST(req: Request) {
   try {
+    // Rate limit: 5 checkout attempts per minute per IP
+    const rl = await RateLimiters.strict.check(req, 5);
+    if (!rl.success) return rateLimitResponse(rl);
+
+    // Require authentication — no anonymous checkout via this route
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+    }
+
     const stripeSecret = mustGetEnv("STRIPE_SECRET_KEY");
     const siteUrl = mustGetEnv("NEXTAUTH_URL"); // you already use this for password reset links
 

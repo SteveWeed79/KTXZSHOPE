@@ -19,6 +19,7 @@ import type { Collection } from "mongodb";
 import Card from "@/models/Card";
 import Order from "@/models/Order";
 import User from "@/models/User";
+import Reservation from "@/models/Reservation";
 import { generateOrderConfirmationEmail } from "@/lib/emails/orderConfirmation";
 
 export const runtime = "nodejs";
@@ -112,7 +113,7 @@ async function markCardsSoldOrDecrementStock(items: Array<{ cardId: string; qty:
 
 async function sendOrderConfirmationEmail(order: any) {
   try {
-    const orderNumber = order.orderNumber || order._id.toString().slice(-8).toUpperCase();
+    const orderNumber = order.orderNumber;
     
     const emailContent = generateOrderConfirmationEmail(
       {
@@ -175,6 +176,25 @@ export async function POST(req: Request) {
     const { alreadyClaimed } = await claimStripeEventOnce(event.id);
     if (alreadyClaimed) {
       return NextResponse.json({ received: true, deduped: true });
+    }
+
+    // Handle session expiry and payment failures — cancel reservations
+    if (
+      event.type === "checkout.session.expired" ||
+      event.type === "checkout.session.async_payment_failed"
+    ) {
+      const expiredSession = event.data.object as Stripe.Checkout.Session;
+      const reservationId = expiredSession.metadata?.reservationId;
+
+      if (reservationId) {
+        await Reservation.updateOne(
+          { _id: reservationId, status: "active" },
+          { $set: { status: "cancelled" } }
+        );
+        console.log(`✅ Reservation ${reservationId} cancelled (${event.type})`);
+      }
+
+      return NextResponse.json({ received: true, handled: event.type });
     }
 
     if (event.type !== "checkout.session.completed") {
@@ -319,8 +339,16 @@ export async function POST(req: Request) {
         : "Checkout completed but not marked paid yet.",
     });
 
-    // Update inventory if paid
+    // Mark reservation as consumed and update inventory
     if (paid) {
+      const reservationId = session.metadata?.reservationId;
+      if (reservationId) {
+        await Reservation.updateOne(
+          { _id: reservationId, status: "active" },
+          { $set: { status: "consumed", orderId: order._id } }
+        );
+      }
+
       await markCardsSoldOrDecrementStock(purchased.map((p) => ({ cardId: p.cardId, qty: p.qty })));
     }
 

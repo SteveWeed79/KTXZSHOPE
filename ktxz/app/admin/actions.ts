@@ -29,7 +29,7 @@ async function checkAdmin() {
   const session = await auth();
   const isAdmin =
     session?.user?.email === process.env.ADMIN_EMAIL ||
-    (session?.user as any)?.role === "admin";
+    (session?.user as { role?: string })?.role === "admin";
   if (!isAdmin) throw new Error("Unauthorized Access Required.");
 }
 
@@ -121,7 +121,7 @@ export async function updateCard(formData: FormData) {
   if (!cardId) throw new Error("Card ID required.");
 
   // Build a safe update object: only update fields that exist in the form
-  const update: Record<string, any> = {
+  const update: Record<string, unknown> = {
     updatedAt: new Date(),
   };
 
@@ -146,7 +146,7 @@ export async function updateCard(formData: FormData) {
   if (rawData.stock !== undefined) {
     // Enforce singles always stock=1 if inventoryType is (or becomes) single
     const current = await Card.findById(cardId).select("inventoryType").lean();
-    const currentType = (current as any)?.inventoryType === "bulk" ? "bulk" : "single";
+    const currentType = (current as { inventoryType?: string } | null)?.inventoryType === "bulk" ? "bulk" : "single";
     const nextType =
       update.inventoryType === "bulk" || update.inventoryType === "single"
         ? update.inventoryType

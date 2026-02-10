@@ -14,7 +14,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 
 interface Order {
@@ -76,32 +76,7 @@ export default function AdminOrdersPage() {
     totalRevenue: 0,
   });
 
-  useEffect(() => {
-    fetchOrders();
-  }, []);
-
-  useEffect(() => {
-    applyFiltersAndSort();
-  }, [orders, statusFilter, searchQuery, dateFrom, dateTo]);
-
-  const fetchOrders = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch("/api/admin/orders");
-      
-      if (!response.ok) throw new Error("Failed to fetch orders");
-      
-      const data = await response.json();
-      setOrders(data.orders || []);
-      calculateStats(data.orders || []);
-    } catch (err) {
-      console.error("Error fetching orders:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const calculateStats = (orderList: Order[]) => {
+  const calculateStats = useCallback((orderList: Order[]) => {
     const newStats = {
       total: orderList.length,
       pending: 0,
@@ -120,9 +95,26 @@ export default function AdminOrdersPage() {
     });
 
     setStats(newStats);
-  };
+  }, []);
 
-  const applyFiltersAndSort = () => {
+  const fetchOrders = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await fetch("/api/admin/orders");
+
+      if (!response.ok) throw new Error("Failed to fetch orders");
+
+      const data = await response.json();
+      setOrders(data.orders || []);
+      calculateStats(data.orders || []);
+    } catch (err) {
+      console.error("Error fetching orders:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [calculateStats]);
+
+  const applyFiltersAndSort = useCallback(() => {
     let filtered = [...orders];
 
     if (statusFilter !== "all") {
@@ -156,7 +148,15 @@ export default function AdminOrdersPage() {
 
     setFilteredOrders(filtered);
     setCurrentPage(1);
-  };
+  }, [orders, statusFilter, searchQuery, dateFrom, dateTo]);
+
+  useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
+
+  useEffect(() => {
+    applyFiltersAndSort();
+  }, [applyFiltersAndSort]);
 
   const exportOrders = () => {
     const csv = [

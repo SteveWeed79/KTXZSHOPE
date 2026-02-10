@@ -82,11 +82,11 @@ CardSchema.pre("save", function () {
 // DEV SAFETY: If Turbopack/hot reload kept an old compiled model around,
 // delete it so the updated schema/middleware is used.
 if (process.env.NODE_ENV !== "production") {
-  const m = mongoose as any;
+  const m = mongoose as typeof mongoose & { models?: Record<string, unknown> };
   if (m.models?.Card) {
     delete m.models.Card;
   }
 }
 
-const Card = (models as any).Card || model("Card", CardSchema);
+const Card = (models as Record<string, unknown>).Card || model("Card", CardSchema);
 export default Card;

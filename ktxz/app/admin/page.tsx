@@ -10,13 +10,8 @@
  */
 
 import {
-  createCard,
   createBrand,
-  updateVaultStatus,
-  deleteCard,
   deleteBrand,
-  updateCard,
-  removeFromVault,
 } from "./actions";
 import dbConnect from "@/lib/dbConnect";
 import Brand from "@/models/Brand";
@@ -47,18 +42,6 @@ type AdminCard = {
   brand?: AdminCardBrand;
 };
 
-const formatDateForInput = (date?: Date | null) => {
-  if (!date) return "";
-  try {
-    const d = new Date(date);
-    if (isNaN(d.getTime())) return "";
-    return new Date(d.getTime() - d.getTimezoneOffset() * 60000)
-      .toISOString()
-      .slice(0, 16);
-  } catch {
-    return "";
-  }
-};
 
 export default async function AdminPage() {
   await dbConnect();
@@ -77,8 +60,6 @@ export default async function AdminPage() {
   const totalOrders = await Order.countDocuments();
   const pendingOrders = await Order.countDocuments({ status: "paid" });
   const fulfilledOrders = await Order.countDocuments({ status: "fulfilled" });
-
-  const now = new Date();
 
   const vaultEvents = cards
     .flatMap((c) => [c.vaultReleaseDate, c.vaultExpiryDate])

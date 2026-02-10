@@ -25,7 +25,7 @@ export async function GET(
     }
 
     const userEmail = session.user.email;
-    const userRole = (session.user as any)?.role;
+    const userRole = (session.user as { role?: string })?.role;
     const isAdmin = userRole === "admin" || userEmail === process.env.ADMIN_EMAIL;
 
     if (!isAdmin) {
@@ -45,15 +45,9 @@ export async function GET(
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
-    // Generate order number if missing
-    const orderWithNumber = {
-      ...order,
-      orderNumber: (order as any).orderNumber || params.id.slice(-8).toUpperCase(),
-    };
-
     return NextResponse.json({
       success: true,
-      order: orderWithNumber,
+      order,
     });
   } catch (error) {
     console.error("Error fetching order:", error);
