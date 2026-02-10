@@ -45,15 +45,9 @@ export async function GET(
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
-    // Generate order number if missing
-    const orderWithNumber = {
-      ...order,
-      orderNumber: (order as Record<string, unknown>).orderNumber || params.id.slice(-8).toUpperCase(),
-    };
-
     return NextResponse.json({
       success: true,
-      order: orderWithNumber,
+      order,
     });
   } catch (error) {
     console.error("Error fetching order:", error);

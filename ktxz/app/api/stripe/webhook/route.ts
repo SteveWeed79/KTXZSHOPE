@@ -112,7 +112,7 @@ async function markCardsSoldOrDecrementStock(items: Array<{ cardId: string; qty:
 
 async function sendOrderConfirmationEmail(order: any) {
   try {
-    const orderNumber = order.orderNumber || order._id.toString().slice(-8).toUpperCase();
+    const orderNumber = order.orderNumber;
     
     const emailContent = generateOrderConfirmationEmail(
       {

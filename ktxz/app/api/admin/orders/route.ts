@@ -39,16 +39,10 @@ export async function GET(_req: NextRequest) {
       .sort({ createdAt: -1 })
       .lean();
 
-    // Generate order numbers if missing
-    const ordersWithNumbers = orders.map((order: Record<string, unknown>) => ({
-      ...order,
-      orderNumber: order.orderNumber || order._id.toString().slice(-8).toUpperCase(),
-    }));
-
     return NextResponse.json({
       success: true,
-      orders: ordersWithNumbers,
-      count: ordersWithNumbers.length,
+      orders,
+      count: orders.length,
     });
   } catch (error) {
     console.error("Error fetching orders:", error);

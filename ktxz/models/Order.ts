@@ -44,8 +44,28 @@ const MoneyBreakdownSchema = new Schema(
   { _id: false }
 );
 
+// Counter collection for auto-incrementing order numbers
+const CounterSchema = new Schema({
+  _id: { type: String, required: true },
+  seq: { type: Number, default: 0 },
+});
+
+const Counter = models.Counter || model("Counter", CounterSchema);
+
+async function getNextOrderNumber(): Promise<string> {
+  const counter = await Counter.findByIdAndUpdate(
+    "orderNumber",
+    { $inc: { seq: 1 } },
+    { new: true, upsert: true }
+  );
+  const num = counter.seq as number;
+  return `KTXZ-${String(num).padStart(5, "0")}`;
+}
+
 const OrderSchema = new Schema(
   {
+    orderNumber: { type: String, unique: true, sparse: true, index: true },
+
     // Optional link to an account (guest orders won't have this)
     user: {
       type: mongoose.Schema.Types.ObjectId,
@@ -104,6 +124,14 @@ const OrderSchema = new Schema(
 OrderSchema.index({ createdAt: -1 });
 OrderSchema.index({ email: 1, createdAt: -1 });
 
+// Auto-generate orderNumber before save if not set
+OrderSchema.pre("save", async function () {
+  if (!this.orderNumber) {
+    this.orderNumber = await getNextOrderNumber();
+  }
+});
+
 const Order = models.Order || model("Order", OrderSchema);
 
+export { getNextOrderNumber };
 export default Order;

@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
     let emailSubject = "";
     let emailContent = { html: "", text: "" };
 
-    const orderNumber = (order as Record<string, unknown>).orderNumber || orderId.toString().slice(-8).toUpperCase();
+    const orderNumber = (order as Record<string, unknown>).orderNumber || orderId;
     const orderData = {
       ...order,
       orderNumber,
