@@ -1,41 +1,19 @@
 import dbConnect from "@/lib/dbConnect";
 import Card from "@/models/Card";
 import Link from "next/link";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { auth } from "@/auth";
+import { loadCart } from "@/lib/cartHelpers";
 import { createCheckoutSession } from "./actions";
-
-type CookieCartItem = {
-  cardId: string;
-  qty: number;
-};
-
-type CookieCart = {
-  id: string;
-  items: CookieCartItem[];
-  updatedAt: number;
-};
-
-const CART_COOKIE = "ktxz_cart_v1";
-
-function safeParseCart(raw: string | undefined): CookieCart | null {
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw) as CookieCart;
-    if (!parsed?.id || !Array.isArray(parsed.items)) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
 
 export default async function CheckoutPage() {
   await dbConnect();
 
-  const cookieStore = await cookies();
-  const cart = safeParseCart(cookieStore.get(CART_COOKIE)?.value);
+  const session = await auth();
+  const userId = session?.user ? (session.user as { id?: string }).id ?? null : null;
 
-  const items = cart?.items ?? [];
+  const cart = await loadCart(userId);
+  const items = cart.items ?? [];
   if (items.length === 0) redirect("/cart");
 
   const ids = items.map((i) => i.cardId).filter(Boolean);
