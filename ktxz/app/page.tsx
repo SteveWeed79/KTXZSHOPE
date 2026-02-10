@@ -1,19 +1,10 @@
-/**
- * ============================================================================
- * FILE: app/page.tsx
- * STATUS: MODIFIED (Remove redundant admin link)
- * ============================================================================
- * 
- * CHANGES:
- * - Removed admin "Command Center" link (keep only in Navbar)
- */
-
 import dbConnect from "@/lib/dbConnect";
 import Card from "@/models/Card";
 import Link from "next/link";
 import ProductCard from "@/components/ProductCard";
 import { auth } from "@/auth";
 import VaultAutoRefresh from "@/components/VaultAutoRefresh";
+import { ArrowRight } from "lucide-react";
 
 type VaultTimestampsLean = {
   vaultReleaseDate?: Date | null;
@@ -49,45 +40,46 @@ export default async function Home() {
     <main className="min-h-[80vh] flex flex-col items-center text-center px-4 relative">
       <VaultAutoRefresh events={events} />
 
-      <div className="fixed top-24 right-0 z-0 hidden 2xl:block pointer-events-none select-none overflow-hidden">
-        <img
-          src="/bunny.png"
-          alt=""
-          className="w-[450px] h-auto opacity-60 brightness-110 translate-x-32 drop-shadow-[0_0_30px_rgba(255,255,255,0.1)]"
-        />
-      </div>
+      {/* Hero Section */}
+      <section className="relative flex flex-col items-center justify-center pt-32 pb-24 overflow-hidden">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-primary/5 blur-[120px] rounded-full" />
 
-      <div className="py-24 space-y-6 z-10">
-        <h1 className="text-8xl md:text-9xl font-black tracking-tighter italic uppercase leading-none">
-          KTXZ<span className="text-red-600 font-normal">SHOPE</span>
-        </h1>
-        <p className="text-gray-500 font-mono tracking-[0.4em] uppercase text-[10px]">
-          Elite Trading Card Acquisitions // Global Sector
-        </p>
+        <div className="relative z-10 space-y-8">
+          <h1 className="text-7xl md:text-9xl font-bold tracking-tighter uppercase leading-[0.9]">
+            KTXZ <br />
+            <span className="text-muted-foreground">SHOP</span>
+          </h1>
 
-        <div className="flex gap-4 justify-center pt-8">
-          <Link href="/shop" className="btn-primary">
-            Enter Marketplace
-          </Link>
-          {session && (
-            <Link href="/profile" className="btn-black">
-              Access Identity
+          <p className="text-muted-foreground font-mono tracking-[0.3em] uppercase text-[10px]">
+            Elite Trading Card Marketplace
+          </p>
+
+          <div className="flex gap-4 justify-center pt-4">
+            <Link
+              href="/shop"
+              className="bg-primary text-primary-foreground px-10 py-4 rounded-full font-bold flex items-center gap-2 hover:brightness-90 transition-all shadow-lg shadow-primary/20"
+            >
+              Enter Storefront <ArrowRight className="h-4 w-4" />
             </Link>
-          )}
+            {session && (
+              <Link href="/profile" className="btn-secondary">
+                My Account
+              </Link>
+            )}
+          </div>
         </div>
+      </section>
 
-        {/* REMOVED: Admin link - now only in Navbar */}
-      </div>
-
+      {/* Vault Section */}
       {vaultCards.length > 0 && (
-        <section className="w-screen bg-black border-t border-gray-900 py-24 mt-12 relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw]">
-          <div className="absolute inset-0 opacity-10 [background-image:linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] [background-size:24px_24px]" />
-
+        <section className="w-screen border-t border-border py-24 mt-12 relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] bg-card">
           <div className="relative z-10 max-w-6xl mx-auto px-6">
             <div className="flex flex-col items-center mb-16">
-              <h2 className="text-[10px] font-black uppercase tracking-[0.6em] text-red-600 mb-2">The Vault</h2>
-              <div className="h-px w-24 bg-red-600/30 mb-4" />
-              <p className="text-xs text-gray-500 uppercase font-mono italic">Priority Acquisitions Only</p>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-border bg-muted/50 text-[10px] font-bold uppercase tracking-widest mb-4">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                The Vault
+              </div>
+              <p className="text-sm text-muted-foreground">Limited drops, available for a limited time.</p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -100,8 +92,6 @@ export default async function Home() {
           </div>
         </section>
       )}
-
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -z-0 w-full max-w-4xl h-96 bg-red-600/5 blur-[120px] rounded-full" />
     </main>
   );
 }
