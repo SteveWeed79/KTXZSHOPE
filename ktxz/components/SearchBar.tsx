@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { Search } from "lucide-react";
 
 export default function SearchBar() {
   const router = useRouter();
@@ -11,7 +12,6 @@ export default function SearchBar() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (!query) return router.push("/");
-    // This sends the user to a search results page
     router.push(`/search?q=${encodeURIComponent(query)}`);
   };
 
@@ -21,11 +21,11 @@ export default function SearchBar() {
         type="text"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search cards (e.g. Charizard)..."
-        className="w-full bg-gray-900 border border-gray-800 text-white text-sm rounded-lg px-4 py-2 focus:outline-none focus:border-green-500 transition-all font-mono"
+        placeholder="Search cards..."
+        className="w-full bg-muted border border-border text-foreground text-sm rounded-lg px-4 py-2 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all placeholder:text-muted-foreground"
       />
-      <button type="submit" className="absolute right-3 top-2 text-gray-500 hover:text-green-500">
-        🔍
+      <button type="submit" className="absolute right-3 top-2 text-muted-foreground hover:text-primary transition-colors">
+        <Search className="h-4 w-4" />
       </button>
     </form>
   );
