@@ -1,4 +1,3 @@
-// ktxz/components/VaultTimer.tsx
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -42,7 +41,7 @@ const VaultTimer: React.FC<VaultTimerProps> = ({ expiryDate }) => {
 
   if (timeLeft === "Expired") {
     return (
-      <span className="text-[9px] text-orange-300 font-bold uppercase tracking-wider bg-orange-950/60 px-2 py-1 rounded border border-orange-500/20">
+      <span className="text-[9px] font-bold uppercase tracking-wider text-orange-600 dark:text-orange-300 bg-orange-100 dark:bg-orange-950/60 px-2 py-1 rounded border border-orange-300 dark:border-orange-500/20">
         Vault Expired
       </span>
     );
@@ -50,14 +49,14 @@ const VaultTimer: React.FC<VaultTimerProps> = ({ expiryDate }) => {
 
   if (timeLeft === "Vault Active" || !timeLeft) {
     return (
-      <span className="text-[9px] text-red-400 font-bold uppercase tracking-wider bg-red-900/30 px-2 py-1 rounded">
+      <span className="text-[9px] font-bold uppercase tracking-wider text-primary bg-primary/10 px-2 py-1 rounded border border-primary/20">
         Vault Active
       </span>
     );
   }
 
   return (
-    <span className="text-[9px] text-red-400 font-bold uppercase tracking-wider bg-red-900/30 px-2 py-1 rounded">
+    <span className="text-[9px] font-bold uppercase tracking-wider text-primary bg-primary/10 px-2 py-1 rounded border border-primary/20">
       Ends In: {timeLeft}
     </span>
   );

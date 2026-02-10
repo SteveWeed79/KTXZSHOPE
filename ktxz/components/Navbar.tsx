@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { auth, signOut } from "@/auth";
 import SearchBar from "@/components/SearchBar";
+import ThemeToggle from "@/components/ThemeToggle";
 import Brand from "@/models/Brand";
 import dbConnect from "@/lib/dbConnect";
 import { Suspense } from "react";
@@ -11,24 +12,24 @@ export default async function Navbar() {
   const brands = await Brand.find({}).lean();
 
   return (
-    <nav className="border-b border-gray-900 p-4 sticky top-0 z-50 bg-black/80 backdrop-blur-md">
-      <div className="max-w-7xl mx-auto flex justify-between items-center gap-8">
+    <nav className="sticky top-0 z-50 w-full border-b border-border bg-background/80 backdrop-blur-md">
+      <div className="max-w-7xl mx-auto flex h-16 items-center justify-between gap-8 px-4">
         {/* LOGO & ADMIN BADGE */}
         <div className="flex items-center gap-4">
           <Link
             href="/"
-            className="text-2xl font-black tracking-tighter hover:text-red-600 transition-colors italic uppercase"
+            className="text-xl font-bold tracking-tighter uppercase hover:text-primary transition-colors"
           >
-            KTXZ
+            KTXZ <span className="text-primary">SHOP</span>
           </Link>
 
           {(session?.user?.email === "steveweed1979@gmail.com" ||
-            (session?.user as any)?.role === "admin") && (
+            (session?.user as { role?: string })?.role === "admin") && (
             <Link
               href="/admin"
-              className="text-[9px] text-red-500 font-bold border border-red-500/30 px-2 py-1 rounded hover:bg-red-600 hover:text-white transition-all tracking-tighter uppercase"
+              className="text-[9px] text-primary font-bold border border-primary/30 px-2 py-1 rounded hover:bg-primary hover:text-primary-foreground transition-all tracking-tighter uppercase"
             >
-              System Admin
+              Admin
             </Link>
           )}
         </div>
@@ -36,43 +37,51 @@ export default async function Navbar() {
         {/* SEARCH */}
         <div className="flex-1 flex justify-center max-w-md">
           <Suspense
-            fallback={<div className="w-full h-10 bg-gray-900 animate-pulse rounded-xl" />}
+            fallback={<div className="w-full h-10 bg-muted animate-pulse rounded-lg" />}
           >
             <SearchBar />
           </Suspense>
         </div>
 
         {/* NAV LINKS & AUTH */}
-        <div className="flex gap-8 items-center">
-          <div className="hidden xl:flex gap-6 font-bold text-[10px] tracking-[0.2em] items-center text-gray-400">
-            {brands.map((brand: any) => (
+        <div className="flex gap-6 items-center">
+          <div className="hidden xl:flex gap-5 font-bold text-[10px] tracking-[0.15em] items-center text-muted-foreground">
+            {brands.map((brand: { _id: { toString(): string }; slug: string; name: string }) => (
               <Link
                 key={brand._id.toString()}
                 href={`/menu/${brand.slug}`}
-                className="hover:text-white transition-colors uppercase"
+                className="hover:text-foreground transition-colors uppercase"
               >
                 {brand.name}
               </Link>
             ))}
+            <Link
+              href="/shop"
+              className="hover:text-foreground transition-colors uppercase"
+            >
+              Store
+            </Link>
           </div>
 
-          <div className="h-4 w-[1px] bg-gray-800 hidden xl:block" />
+          <div className="h-4 w-px bg-border hidden xl:block" />
+
+          <ThemeToggle />
 
           {/* CART LINK */}
           <Link
             href="/cart"
-            className="text-[10px] uppercase font-bold tracking-[0.2em] text-gray-400 hover:text-white transition-colors"
+            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
             Cart
           </Link>
 
           {session ? (
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-4">
               <Link href="/profile" className="flex items-center gap-2 group">
-                <div className="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center font-black text-[10px] text-white border border-red-500 shadow-[0_0_10px_rgba(255,0,0,0.3)] group-hover:scale-110 transition-transform">
+                <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center font-bold text-xs text-primary-foreground group-hover:scale-110 transition-transform">
                   {session.user?.name?.charAt(0) || "U"}
                 </div>
-                <span className="text-[10px] uppercase tracking-widest text-gray-400 group-hover:text-white transition-colors hidden sm:inline">
+                <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors hidden sm:inline">
                   Account
                 </span>
               </Link>
@@ -83,17 +92,15 @@ export default async function Navbar() {
                   await signOut({ redirectTo: "/" });
                 }}
               >
-                <button className="text-[10px] text-gray-600 hover:text-red-600 uppercase font-bold transition-colors cursor-pointer">
-                  Terminate Session [Logoff]
+                <button className="text-xs text-muted-foreground hover:text-primary font-medium transition-colors cursor-pointer">
+                  Sign Out
                 </button>
               </form>
             </div>
           ) : (
-            <div className="flex items-center gap-4">
-              <Link href="/login" className="btn-primary">
-                Access Portal
-              </Link>
-            </div>
+            <Link href="/login" className="btn-primary">
+              Sign In
+            </Link>
           )}
         </div>
       </div>

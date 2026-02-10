@@ -1,21 +1,8 @@
-/**
- * ============================================================================
- * FILE: app/admin/orders/page.tsx
- * STATUS: NEW FILE
- * ============================================================================
- * 
- * Admin Orders List Page
- * - Dashboard with order statistics
- * - Filtering (status, search, date range)
- * - Pagination (20 per page)
- * - CSV export
- * - Links to individual order details
- */
-
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { ArrowLeft, Download, Package, Clock, CreditCard, DollarSign } from "lucide-react";
 
 interface Order {
   _id: string;
@@ -37,32 +24,24 @@ interface Order {
 
 type StatusFilter = "all" | "pending" | "paid" | "fulfilled" | "cancelled" | "refunded";
 
-const STATUS_COLORS = {
-  pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
-  paid: "bg-blue-100 text-blue-800 border-blue-200",
-  fulfilled: "bg-green-100 text-green-800 border-green-200",
-  cancelled: "bg-gray-100 text-gray-800 border-gray-200",
-  refunded: "bg-red-100 text-red-800 border-red-200",
-};
-
-const STATUS_BADGES = {
-  pending: "⏳",
-  paid: "💳",
-  fulfilled: "✅",
-  cancelled: "❌",
-  refunded: "💸",
+const STATUS_COLORS: Record<string, string> = {
+  pending: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800",
+  paid: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-800",
+  fulfilled: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800",
+  cancelled: "bg-muted text-muted-foreground border-border",
+  refunded: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800",
 };
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  
+
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
 
@@ -101,9 +80,7 @@ export default function AdminOrdersPage() {
     try {
       setLoading(true);
       const response = await fetch("/api/admin/orders");
-
       if (!response.ok) throw new Error("Failed to fetch orders");
-
       const data = await response.json();
       setOrders(data.orders || []);
       calculateStats(data.orders || []);
@@ -142,8 +119,9 @@ export default function AdminOrdersPage() {
       );
     }
 
-    filtered.sort((a, b) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    filtered.sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
 
     setFilteredOrders(filtered);
@@ -188,95 +166,103 @@ export default function AdminOrdersPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading orders...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
+          <p className="mt-4 text-muted-foreground text-sm">Loading orders...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
+    <div className="min-h-screen py-8">
+      <div className="max-w-7xl mx-auto px-4">
         {/* Header */}
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Order Management</h1>
-            <p className="mt-1 text-sm text-gray-500">Manage and track all customer orders</p>
+            <h1 className="text-3xl font-bold tracking-tight">Order Management</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Manage and track all customer orders
+            </p>
           </div>
-          <Link href="/admin" className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">
-            ← Back to Admin
+          <Link
+            href="/admin"
+            className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-2 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" /> Back to Admin
           </Link>
         </div>
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-card border border-border rounded-xl p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Orders</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+                <p className="text-sm font-medium text-muted-foreground">Total Orders</p>
+                <p className="text-2xl font-bold">{stats.total}</p>
               </div>
-              <div className="text-3xl">📦</div>
+              <Package className="h-5 w-5 text-muted-foreground" />
             </div>
           </div>
-          
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-card border border-border rounded-xl p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Pending</p>
-                <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
+                <p className="text-sm font-medium text-muted-foreground">Pending</p>
+                <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
+                  {stats.pending}
+                </p>
               </div>
-              <div className="text-3xl">⏳</div>
+              <Clock className="h-5 w-5 text-yellow-500" />
             </div>
           </div>
-          
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-card border border-border rounded-xl p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">To Fulfill</p>
-                <p className="text-2xl font-bold text-blue-600">{stats.paid}</p>
+                <p className="text-sm font-medium text-muted-foreground">To Fulfill</p>
+                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                  {stats.paid}
+                </p>
               </div>
-              <div className="text-3xl">📋</div>
+              <CreditCard className="h-5 w-5 text-blue-500" />
             </div>
           </div>
-          
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-card border border-border rounded-xl p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Revenue</p>
-                <p className="text-2xl font-bold text-green-600">
+                <p className="text-sm font-medium text-muted-foreground">Revenue</p>
+                <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                   ${(stats.totalRevenue / 100).toFixed(2)}
                 </p>
               </div>
-              <div className="text-3xl">💰</div>
+              <DollarSign className="h-5 w-5 text-green-500" />
             </div>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-lg shadow mb-6 p-6">
+        <div className="bg-card border border-border rounded-xl mb-6 p-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
+              <label className="block text-sm font-medium text-muted-foreground mb-1">
+                Search
+              </label>
               <input
                 type="text"
                 placeholder="Order #, email, name..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                className="w-full px-4 py-2 bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:ring-1 focus:ring-primary focus:border-primary transition-all"
               />
             </div>
-
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+              <label className="block text-sm font-medium text-muted-foreground mb-1">
+                Status
+              </label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                className="w-full px-4 py-2 bg-background border border-border rounded-lg text-foreground"
               >
                 <option value="all">All Statuses</option>
                 <option value="pending">Pending</option>
@@ -286,29 +272,31 @@ export default function AdminOrdersPage() {
                 <option value="refunded">Refunded</option>
               </select>
             </div>
-
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">From Date</label>
+              <label className="block text-sm font-medium text-muted-foreground mb-1">
+                From Date
+              </label>
               <input
                 type="date"
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                className="w-full px-4 py-2 bg-background border border-border rounded-lg text-foreground"
               />
             </div>
-
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">To Date</label>
+              <label className="block text-sm font-medium text-muted-foreground mb-1">
+                To Date
+              </label>
               <input
                 type="date"
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                className="w-full px-4 py-2 bg-background border border-border rounded-lg text-foreground"
               />
             </div>
           </div>
 
-          <div className="mt-4 flex items-center justify-between border-t pt-4">
+          <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
             <div className="flex items-center gap-4">
               <button
                 onClick={() => {
@@ -317,85 +305,100 @@ export default function AdminOrdersPage() {
                   setDateFrom("");
                   setDateTo("");
                 }}
-                className="text-sm text-gray-600 hover:text-gray-900"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 Clear Filters
               </button>
-              <span className="text-sm text-gray-500">
+              <span className="text-sm text-muted-foreground">
                 Showing {filteredOrders.length} of {orders.length} orders
               </span>
             </div>
-            
+
             <button
               onClick={exportOrders}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:brightness-90 transition-all text-sm font-medium flex items-center gap-2"
             >
-              📊 Export CSV
+              <Download className="h-4 w-4" /> Export CSV
             </button>
           </div>
         </div>
 
         {/* Table */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+        <div className="bg-card border border-border rounded-xl overflow-hidden">
+          <table className="min-w-full divide-y divide-border">
+            <thead className="bg-muted">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Order #</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Items</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                  Order #
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                  Date
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                  Customer
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                  Items
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                  Total
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                  Actions
+                </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="divide-y divide-border">
               {currentOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
                     No orders found
                   </td>
                 </tr>
               ) : (
                 currentOrders.map((order) => (
-                  <tr key={order._id} className="hover:bg-gray-50">
+                  <tr key={order._id} className="hover:bg-muted/50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{order.orderNumber}</div>
+                      <div className="text-sm font-medium">{order.orderNumber}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
+                      <div className="text-sm">
                         {new Date(order.createdAt).toLocaleDateString()}
                       </div>
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs text-muted-foreground">
                         {new Date(order.createdAt).toLocaleTimeString()}
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900">
+                      <div className="text-sm">
                         {order.shippingAddress?.name || "N/A"}
                       </div>
-                      <div className="text-xs text-gray-500">{order.email}</div>
+                      <div className="text-xs text-muted-foreground">{order.email}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{order.items.length} item(s)</div>
+                      <div className="text-sm">{order.items.length} item(s)</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-semibold text-gray-900">
+                      <div className="text-sm font-semibold">
                         ${(order.amounts.total / 100).toFixed(2)}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border ${STATUS_COLORS[order.status]}`}>
-                        <span>{STATUS_BADGES[order.status]}</span>
+                      <span
+                        className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${STATUS_COLORS[order.status] || ""}`}
+                      >
                         {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <Link
                         href={`/admin/orders/${order._id}`}
-                        className="text-blue-600 hover:text-blue-900 font-medium"
+                        className="text-primary hover:underline font-medium"
                       >
-                        View Details →
+                        View Details
                       </Link>
                     </td>
                   </tr>
@@ -404,26 +407,27 @@ export default function AdminOrdersPage() {
             </tbody>
           </table>
 
-          {/* Pagination */}
           {totalPages > 1 && (
-            <div className="bg-white px-4 py-3 flex items-center justify-between border-t">
-              <div>
-                <p className="text-sm text-gray-700">
-                  Showing {startIndex + 1} to {Math.min(endIndex, filteredOrders.length)} of {filteredOrders.length}
-                </p>
-              </div>
-              <div>
+            <div className="px-4 py-3 flex items-center justify-between border-t border-border">
+              <p className="text-sm text-muted-foreground">
+                Showing {startIndex + 1} to{" "}
+                {Math.min(endIndex, filteredOrders.length)} of{" "}
+                {filteredOrders.length}
+              </p>
+              <div className="flex">
                 <button
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
-                  className="px-4 py-2 border rounded-l text-sm disabled:opacity-50"
+                  className="px-4 py-2 border border-border rounded-l-lg text-sm disabled:opacity-50 hover:bg-muted transition-colors"
                 >
                   Previous
                 </button>
                 <button
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  onClick={() =>
+                    setCurrentPage((p) => Math.min(totalPages, p + 1))
+                  }
                   disabled={currentPage === totalPages}
-                  className="px-4 py-2 border rounded-r text-sm disabled:opacity-50"
+                  className="px-4 py-2 border border-border rounded-r-lg text-sm disabled:opacity-50 hover:bg-muted transition-colors"
                 >
                   Next
                 </button>

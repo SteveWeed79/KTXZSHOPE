@@ -2,37 +2,55 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-
-  /* Your theme token */
-  --color-ktx-red: #ff0000;
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 98%;
+    --card-foreground: 240 10% 3.9%;
+    --primary: 0 100% 50%;
+    --primary-foreground: 0 0% 100%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --border: 240 5.9% 90%;
+    --ring: 0 100% 50%;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 0 0% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 5.9%;
+    --card-foreground: 0 0% 98%;
+    --primary: 0 100% 50%;
+    --primary-foreground: 0 0% 100%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --border: 240 3.7% 15.9%;
+    --ring: 0 100% 50%;
   }
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
 }
 
 /* --- BUTTON CLASSES --- */
 
 .btn-primary {
-  @apply bg-red-600 text-white font-bold py-3 px-6 rounded-xl transition-all duration-200 uppercase text-xs tracking-widest hover:bg-red-700;
+  @apply bg-primary text-primary-foreground font-bold py-3 px-6 rounded-xl transition-all duration-200 uppercase text-xs tracking-widest hover:brightness-90;
 }
 
-.btn-black {
-  @apply bg-black border border-gray-800 text-white font-bold py-3 px-6 rounded-xl transition-all duration-200 uppercase text-xs tracking-widest hover:border-red-600;
+.btn-secondary {
+  @apply bg-card border border-border text-foreground font-bold py-3 px-6 rounded-xl transition-all duration-200 uppercase text-xs tracking-widest hover:border-primary;
 }
 
 .btn-outline {
-  @apply border-2 border-gray-900 text-gray-900 font-bold py-3 px-6 rounded-xl transition-all duration-200 uppercase text-xs tracking-widest hover:bg-gray-900 hover:text-white;
+  @apply border-2 border-border text-foreground font-bold py-3 px-6 rounded-xl transition-all duration-200 uppercase text-xs tracking-widest hover:bg-foreground hover:text-background;
 }
