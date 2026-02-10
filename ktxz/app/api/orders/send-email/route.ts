@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     }
 
     const userEmail = session.user.email;
-    const userRole = (session.user as any)?.role;
+    const userRole = (session.user as { role?: string })?.role;
     const isAdmin = userRole === "admin" || userEmail === process.env.ADMIN_EMAIL;
 
     if (!isAdmin) {
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
-    if (emailType === "shipping" && !(order as any).trackingNumber) {
+    if (emailType === "shipping" && !(order as Record<string, unknown>).trackingNumber) {
       return NextResponse.json(
         { error: "Cannot send shipping email without tracking number" },
         { status: 400 }
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
     }
 
     // TODO: Integrate with email service (Resend, SendGrid, etc.)
-    console.log(`Sending ${emailType} email to:`, (order as any).email);
+    console.log(`Sending ${emailType} email to:`, (order as Record<string, unknown>).email);
     console.log("Order data:", order);
 
     // Example Resend integration:

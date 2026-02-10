@@ -14,8 +14,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 
 interface Order {
@@ -70,7 +69,6 @@ interface Order {
 }
 
 export default function OrderDetailPage({ params }: { params: { id: string } }) {
-  const router = useRouter();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   
@@ -79,11 +77,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
   const [notes, setNotes] = useState("");
   const [updating, setUpdating] = useState(false);
 
-  useEffect(() => {
-    fetchOrder();
-  }, [params.id]);
-
-  const fetchOrder = async () => {
+  const fetchOrder = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(`/api/admin/orders/${params.id}`);
@@ -99,7 +93,11 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
     } finally {
       setLoading(false);
     }
-  };
+  }, [params.id]);
+
+  useEffect(() => {
+    fetchOrder();
+  }, [fetchOrder]);
 
   const updateStatus = async (newStatus: string) => {
     if (!confirm(`Change order status to ${newStatus}?`)) return;

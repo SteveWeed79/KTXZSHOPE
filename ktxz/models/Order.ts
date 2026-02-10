@@ -59,7 +59,7 @@ const OrderSchema = new Schema(
       type: [OrderItemSchema],
       required: true,
       validate: {
-        validator(v: any[]) {
+        validator(v: unknown[]) {
           return Array.isArray(v) && v.length > 0;
         },
         message: "Order must contain at least one item.",

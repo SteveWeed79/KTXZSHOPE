@@ -21,7 +21,7 @@ function redirectBack(req: Request) {
 
 export async function POST(req: Request) {
   const session = await auth();
-  const userId = session?.user ? (session.user as any).id : null;
+  const userId = session?.user ? (session.user as { id?: string }).id : null;
 
   const form = await req.formData();
   const cardId = String(form.get("cardId") || "").trim();

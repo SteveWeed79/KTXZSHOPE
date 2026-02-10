@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     }
 
     const userEmail = session.user.email;
-    const userRole = (session.user as any)?.role;
+    const userRole = (session.user as { role?: string })?.role;
     const isAdmin = userRole === "admin" || userEmail === process.env.ADMIN_EMAIL;
 
     if (!isAdmin) {
@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
 
     // Validate tracking number for shipping emails
     if (emailType === "shipping") {
-      if (!(order as any).trackingNumber) {
+      if (!(order as Record<string, unknown>).trackingNumber) {
         return NextResponse.json(
           { error: "Cannot send shipping email without tracking number" },
           { status: 400 }
@@ -84,11 +84,11 @@ export async function POST(req: NextRequest) {
     let emailSubject = "";
     let emailContent = { html: "", text: "" };
 
-    const orderNumber = (order as any).orderNumber || orderId.toString().slice(-8).toUpperCase();
+    const orderNumber = (order as Record<string, unknown>).orderNumber || orderId.toString().slice(-8).toUpperCase();
     const orderData = {
       ...order,
       orderNumber,
-    } as any;
+    } as Record<string, unknown>;
 
     if (emailType === "confirmation") {
       emailSubject = `Order Confirmation #${orderNumber} - KTXZ`;
@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
     // Send email via Resend
     const emailResult = await resend.emails.send({
       from: `${EMAIL_FROM_NAME} <${EMAIL_FROM}>`,
-      to: (order as any).email,
+      to: (order as Record<string, unknown>).email as string,
       subject: emailSubject,
       html: emailContent.html,
       text: emailContent.text,
@@ -123,10 +123,10 @@ export async function POST(req: NextRequest) {
       message: `${emailType} email sent successfully`,
       emailId: emailResult.data.id,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error sending email:", error);
     return NextResponse.json(
-      { error: "Failed to send email", details: error.message },
+      { error: "Failed to send email", details: error instanceof Error ? error.message : "Unknown error" },
       { status: 500 }
     );
   }

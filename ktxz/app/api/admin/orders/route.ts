@@ -13,7 +13,7 @@ import { auth } from "@/auth";
 import dbConnect from "@/lib/dbConnect";
 import Order from "@/models/Order";
 
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   try {
     // Check admin authentication
     const session = await auth();
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     }
 
     const userEmail = session.user.email;
-    const userRole = (session.user as any)?.role;
+    const userRole = (session.user as { role?: string })?.role;
     const isAdmin = userRole === "admin" || userEmail === process.env.ADMIN_EMAIL;
 
     if (!isAdmin) {
@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
       .lean();
 
     // Generate order numbers if missing
-    const ordersWithNumbers = orders.map((order: any) => ({
+    const ordersWithNumbers = orders.map((order: Record<string, unknown>) => ({
       ...order,
       orderNumber: order.orderNumber || order._id.toString().slice(-8).toUpperCase(),
     }));

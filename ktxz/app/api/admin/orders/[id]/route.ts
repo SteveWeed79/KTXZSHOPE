@@ -25,7 +25,7 @@ export async function GET(
     }
 
     const userEmail = session.user.email;
-    const userRole = (session.user as any)?.role;
+    const userRole = (session.user as { role?: string })?.role;
     const isAdmin = userRole === "admin" || userEmail === process.env.ADMIN_EMAIL;
 
     if (!isAdmin) {
@@ -48,7 +48,7 @@ export async function GET(
     // Generate order number if missing
     const orderWithNumber = {
       ...order,
-      orderNumber: (order as any).orderNumber || params.id.slice(-8).toUpperCase(),
+      orderNumber: (order as Record<string, unknown>).orderNumber || params.id.slice(-8).toUpperCase(),
     };
 
     return NextResponse.json({
