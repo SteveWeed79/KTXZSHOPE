@@ -1,14 +1,3 @@
-/**
- * ============================================================================
- * FILE: app/admin/page.tsx
- * STATUS: MODIFIED (Add Order Management section)
- * ============================================================================
- * 
- * CHANGES:
- * - Added "Order Management" section linking to /admin/orders
- * - Provides quick access to all orders, pending, and fulfilled
- */
-
 import {
   createBrand,
   deleteBrand,
@@ -20,6 +9,7 @@ import Order from "@/models/Order";
 import AdminSection from "@/components/AdminSection";
 import VaultAutoRefresh from "@/components/VaultAutoRefresh";
 import Link from "next/link";
+import { Package, Clock, CheckCircle, Settings } from "lucide-react";
 
 type IdLike = { toString(): string };
 
@@ -56,7 +46,6 @@ export default async function AdminPage() {
     })
   );
 
-  // Get order counts for new section
   const totalOrders = await Order.countDocuments();
   const pendingOrders = await Order.countDocuments({ status: "paid" });
   const fulfilledOrders = await Order.countDocuments({ status: "fulfilled" });
@@ -66,67 +55,72 @@ export default async function AdminPage() {
     .filter((d): d is Date => !!d);
 
   return (
-    <main className="min-h-screen bg-black p-8 font-sans text-white">
+    <main className="min-h-screen py-8">
       <VaultAutoRefresh events={vaultEvents} />
 
       <div className="max-w-5xl mx-auto space-y-6">
-        <header className="mb-12">
-          <h1 className="text-4xl font-black italic uppercase tracking-tighter text-white">
-            Command Center
-          </h1>
-          <p className="text-gray-500 font-mono text-[10px] tracking-[0.3em] uppercase mt-2">
-            Inventory & Vault Logistics
-          </p>
+        <header className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tighter uppercase">
+              Admin Dashboard
+            </h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              Inventory, orders & site management
+            </p>
+          </div>
+          <Link
+            href="/admin/settings"
+            className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          >
+            <Settings className="h-5 w-5" />
+          </Link>
         </header>
 
-        {/* NEW: Order Management Section */}
+        {/* Order Management Section */}
         <AdminSection
-          title="0. Order Management"
-          subtitle="Process Customer Orders & Fulfillment"
+          title="Order Management"
+          subtitle="Process customer orders & fulfillment"
           badge={totalOrders}
         >
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Link 
-              href="/admin/orders" 
-              className="border border-gray-800 p-6 rounded-xl hover:border-red-600 transition-all group"
+            <Link
+              href="/admin/orders"
+              className="border border-border p-6 rounded-xl hover:border-primary transition-all group bg-background"
             >
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-bold text-white text-sm uppercase tracking-wider">All Orders</h3>
-                <span className="text-2xl font-black text-gray-800 group-hover:text-red-600 transition-colors">
-                  {totalOrders}
-                </span>
+                <h3 className="font-bold text-sm uppercase tracking-wider">All Orders</h3>
+                <Package className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
               </div>
-              <p className="text-xs text-gray-500 uppercase tracking-wide">
-                View and manage all customer orders
+              <span className="text-3xl font-bold">{totalOrders}</span>
+              <p className="text-xs text-muted-foreground mt-1">
+                View and manage all orders
               </p>
             </Link>
-            
-            <Link 
-              href="/admin/orders?status=paid" 
-              className="border border-gray-800 p-6 rounded-xl hover:border-yellow-600 transition-all group"
+
+            <Link
+              href="/admin/orders?status=paid"
+              className="border border-border p-6 rounded-xl hover:border-yellow-500 transition-all group bg-background"
             >
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-bold text-white text-sm uppercase tracking-wider">Pending</h3>
-                <span className="text-2xl font-black text-gray-800 group-hover:text-yellow-600 transition-colors">
-                  {pendingOrders}
-                </span>
+                <h3 className="font-bold text-sm uppercase tracking-wider">Pending</h3>
+                <Clock className="h-5 w-5 text-muted-foreground group-hover:text-yellow-500 transition-colors" />
               </div>
-              <p className="text-xs text-gray-500 uppercase tracking-wide">
-                Orders awaiting fulfillment
+              <span className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">{pendingOrders}</span>
+              <p className="text-xs text-muted-foreground mt-1">
+                Awaiting fulfillment
               </p>
             </Link>
-            
-            <Link 
-              href="/admin/orders?status=fulfilled" 
-              className="border border-gray-800 p-6 rounded-xl hover:border-green-600 transition-all group"
+
+            <Link
+              href="/admin/orders?status=fulfilled"
+              className="border border-border p-6 rounded-xl hover:border-green-500 transition-all group bg-background"
             >
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-bold text-white text-sm uppercase tracking-wider">Fulfilled</h3>
-                <span className="text-2xl font-black text-gray-800 group-hover:text-green-600 transition-colors">
-                  {fulfilledOrders}
-                </span>
+                <h3 className="font-bold text-sm uppercase tracking-wider">Fulfilled</h3>
+                <CheckCircle className="h-5 w-5 text-muted-foreground group-hover:text-green-500 transition-colors" />
               </div>
-              <p className="text-xs text-gray-500 uppercase tracking-wide">
+              <span className="text-3xl font-bold text-green-600 dark:text-green-400">{fulfilledOrders}</span>
+              <p className="text-xs text-muted-foreground mt-1">
                 Completed shipments
               </p>
             </Link>
@@ -134,19 +128,19 @@ export default async function AdminPage() {
         </AdminSection>
 
         <AdminSection
-          title="1. Game Categories"
-          subtitle="Initialize & Manage Brands"
+          title="Game Categories"
+          subtitle="Manage trading card game brands"
           badge={brandsWithCounts.length}
         >
           <form action={createBrand} className="flex gap-4 mb-8">
             <input
               name="name"
               required
-              placeholder="NEW CATEGORY NAME"
-              className="flex-1 bg-black border border-gray-800 p-4 rounded-xl text-white outline-none focus:border-red-600 transition-all placeholder:text-gray-700"
+              placeholder="New category name"
+              className="flex-1 bg-background border border-border p-3 rounded-xl text-foreground outline-none focus:ring-1 focus:ring-primary transition-all placeholder:text-muted-foreground"
             />
-            <button className="bg-white text-black px-8 font-black rounded-xl hover:bg-red-600 hover:text-white transition-all uppercase text-xs">
-              Initialize
+            <button className="bg-primary text-primary-foreground px-6 font-bold rounded-xl hover:brightness-90 transition-all uppercase text-xs tracking-wide">
+              Add
             </button>
           </form>
 
@@ -154,18 +148,18 @@ export default async function AdminPage() {
             {brandsWithCounts.map((b) => (
               <div
                 key={b._id}
-                className="flex items-center gap-3 bg-black border border-gray-800 px-4 py-2 rounded-xl"
+                className="flex items-center gap-3 bg-background border border-border px-4 py-2 rounded-xl"
               >
-                <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">
-                  {b.name} <span className="text-gray-600">[{b.count}]</span>
+                <span className="text-xs font-bold text-foreground uppercase tracking-widest">
+                  {b.name} <span className="text-muted-foreground">[{b.count}]</span>
                 </span>
                 <form action={deleteBrand}>
                   <input type="hidden" name="brandId" value={b._id} />
                   <button
                     type="submit"
-                    className="text-gray-700 hover:text-red-500 font-black text-xs"
+                    className="text-muted-foreground hover:text-primary font-bold text-xs transition-colors"
                   >
-                    ✕
+                    x
                   </button>
                 </form>
               </div>
@@ -173,16 +167,15 @@ export default async function AdminPage() {
           </div>
         </AdminSection>
 
-        {/* Rest of sections remain the same... */}
-        <AdminSection title="2. Upload New Card" subtitle="Push Assets to Live Inventory">
+        <AdminSection title="Upload New Card" subtitle="Add cards to live inventory">
           {/* Card upload form - unchanged */}
         </AdminSection>
 
-        <AdminSection title="3. Vault Schedule" subtitle="Program Time-Based Releases">
+        <AdminSection title="Vault Schedule" subtitle="Program time-based releases">
           {/* Vault scheduling - unchanged */}
         </AdminSection>
 
-        <AdminSection title="4. Master Inventory" subtitle="Modify & Purge Assets">
+        <AdminSection title="Master Inventory" subtitle="Manage & modify all cards">
           {/* Master inventory - unchanged */}
         </AdminSection>
       </div>
