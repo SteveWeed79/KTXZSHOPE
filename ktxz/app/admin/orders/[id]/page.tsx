@@ -77,6 +77,13 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
   const [notes, setNotes] = useState("");
   const [updating, setUpdating] = useState(false);
 
+  // Refund state
+  const [showRefundForm, setShowRefundForm] = useState(false);
+  const [refundType, setRefundType] = useState<"full" | "partial">("full");
+  const [refundAmount, setRefundAmount] = useState("");
+  const [refundReason, setRefundReason] = useState("");
+  const [refunding, setRefunding] = useState(false);
+
   const fetchOrder = useCallback(async () => {
     try {
       setLoading(true);
@@ -164,6 +171,51 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
     } catch (err) {
       console.error("Error sending email:", err);
       alert("Failed to send email");
+    }
+  };
+
+  const processRefund = async () => {
+    const isPartial = refundType === "partial";
+    const amt = isPartial ? parseFloat(refundAmount) : null;
+
+    if (isPartial && (!amt || amt <= 0)) {
+      alert("Please enter a valid refund amount");
+      return;
+    }
+
+    const confirmMsg = isPartial
+      ? `Process a partial refund of $${amt?.toFixed(2)}?`
+      : "Process a FULL refund for this order?";
+
+    if (!confirm(confirmMsg)) return;
+
+    try {
+      setRefunding(true);
+      const response = await fetch("/api/admin/orders/refund", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId: params.id,
+          amount: isPartial ? amt : undefined,
+          reason: refundReason || undefined,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.error || "Failed to process refund");
+        return;
+      }
+
+      alert(data.message);
+      setShowRefundForm(false);
+      await fetchOrder();
+    } catch (err) {
+      console.error("Error processing refund:", err);
+      alert("Failed to process refund");
+    } finally {
+      setRefunding(false);
     }
   };
 
@@ -409,22 +461,110 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
                     Mark as Fulfilled
                   </button>
                 )}
-                <button
-                  onClick={() => updateStatus("cancelled")}
-                  disabled={updating}
-                  className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
-                >
-                  Cancel Order
-                </button>
-                <button
-                  onClick={() => updateStatus("refunded")}
-                  disabled={updating}
-                  className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-                >
-                  Refund Order
-                </button>
+                {order.status !== "cancelled" && order.status !== "refunded" && (
+                  <button
+                    onClick={() => updateStatus("cancelled")}
+                    disabled={updating}
+                    className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+                  >
+                    Cancel Order
+                  </button>
+                )}
+                {order.status !== "refunded" && order.status !== "pending" && (
+                  <button
+                    onClick={() => setShowRefundForm(!showRefundForm)}
+                    disabled={refunding}
+                    className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                  >
+                    Refund Order
+                  </button>
+                )}
               </div>
             </div>
+
+            {/* Refund Form */}
+            {showRefundForm && (
+              <div className="bg-white rounded-lg shadow p-6 border-2 border-red-200">
+                <h2 className="text-lg font-semibold mb-4 text-red-700">Process Refund</h2>
+                <div className="space-y-4">
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="refundType"
+                        value="full"
+                        checked={refundType === "full"}
+                        onChange={() => setRefundType("full")}
+                      />
+                      <span className="text-sm font-medium">Full Refund</span>
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="refundType"
+                        value="partial"
+                        checked={refundType === "partial"}
+                        onChange={() => setRefundType("partial")}
+                      />
+                      <span className="text-sm font-medium">Partial Refund</span>
+                    </label>
+                  </div>
+
+                  {refundType === "partial" && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Refund Amount ($)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        max={order.amounts.total}
+                        value={refundAmount}
+                        onChange={(e) => setRefundAmount(e.target.value)}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                        placeholder="0.00"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Order total: ${order.amounts.total.toFixed(2)}
+                      </p>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Reason (optional)
+                    </label>
+                    <select
+                      value={refundReason}
+                      onChange={(e) => setRefundReason(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                    >
+                      <option value="">No reason specified</option>
+                      <option value="requested_by_customer">Customer request</option>
+                      <option value="duplicate">Duplicate charge</option>
+                      <option value="fraudulent">Fraudulent</option>
+                    </select>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={processRefund}
+                      disabled={refunding}
+                      className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+                    >
+                      {refunding ? "Processing..." : "Confirm Refund"}
+                    </button>
+                    <button
+                      onClick={() => setShowRefundForm(false)}
+                      className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Email Actions */}
             <div className="bg-white rounded-lg shadow p-6">
