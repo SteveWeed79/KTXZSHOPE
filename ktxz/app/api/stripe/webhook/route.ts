@@ -12,7 +12,6 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { Resend } from "resend";
 import dbConnect from "@/lib/dbConnect";
 import mongoose from "mongoose";
 import type { Collection } from "mongodb";
@@ -21,25 +20,11 @@ import Order from "@/models/Order";
 import User from "@/models/User";
 import Reservation from "@/models/Reservation";
 import { generateOrderConfirmationEmail } from "@/lib/emails/orderConfirmation";
+import { mustGetStripe, fromCents } from "@/lib/stripe";
+import { mustGetEnv } from "@/lib/envValidation";
+import { getResend, EMAIL_FROM, EMAIL_FROM_NAME, SITE_URL } from "@/lib/emailConfig";
 
 export const runtime = "nodejs";
-
-const resend = new Resend(process.env.RESEND_API_KEY);
-
-const EMAIL_FROM = process.env.EMAIL_FROM || "onboarding@resend.dev";
-const EMAIL_FROM_NAME = process.env.EMAIL_FROM_NAME || "KTXZ";
-const SITE_URL = process.env.NEXTAUTH_URL || process.env.SITE_URL || "http://localhost:3000";
-
-function mustGetEnv(name: string) {
-  const v = process.env[name];
-  if (!v) throw new Error(`Missing ${name} env var.`);
-  return v;
-}
-
-function centsToDollars(cents: number | null | undefined) {
-  const n = typeof cents === "number" ? cents : 0;
-  return Math.round(n) / 100;
-}
 
 function normalizeStripeAddress(a: Stripe.Address | null | undefined) {
   return {
@@ -87,23 +72,6 @@ async function unclaimStripeEvent(eventId: string) {
   await col.deleteOne({ _id: eventId });
 }
 
-/**
- * Restore stock for items that were decremented.
- * Used as a compensating transaction when order processing fails after stock update.
- */
-async function restoreStock(items: Array<{ cardId: string; qty: number }>) {
-  for (const it of items) {
-    const qty = Math.max(1, Number(it.qty || 1));
-    await Card.findOneAndUpdate(
-      { _id: it.cardId },
-      {
-        $inc: { stock: qty },
-        $set: { status: "active", isActive: true },
-      }
-    );
-  }
-}
-
 async function markCardsSoldOrDecrementStock(items: Array<{ cardId: string; qty: number }>) {
   for (const it of items) {
     const qty = Math.max(1, Number(it.qty || 1));
@@ -146,7 +114,7 @@ async function sendOrderConfirmationEmail(order: any) {
       SITE_URL
     );
 
-    const result = await resend.emails.send({
+    const result = await getResend().emails.send({
       from: `${EMAIL_FROM_NAME} <${EMAIL_FROM}>`,
       to: order.email,
       subject: `Order Confirmation #${orderNumber} - KTXZ`,
@@ -169,12 +137,8 @@ async function sendOrderConfirmationEmail(order: any) {
 
 export async function POST(req: Request) {
   try {
-    const stripeSecret = mustGetEnv("STRIPE_SECRET_KEY");
     const webhookSecret = mustGetEnv("STRIPE_WEBHOOK_SECRET");
-
-    const stripe = new Stripe(stripeSecret, {
-      apiVersion: "2026-01-28.clover",
-    });
+    const stripe = mustGetStripe();
 
     const sig = req.headers.get("stripe-signature");
     if (!sig) {
@@ -282,7 +246,7 @@ export async function POST(req: Request) {
             ? Math.round(((li as any).amount_total as number) / Math.max(1, qty))
             : 0;
 
-      const unitPrice = centsToDollars(unitAmountCents);
+      const unitPrice = fromCents(unitAmountCents);
 
       if (cardId) {
         purchased.push({
@@ -324,10 +288,10 @@ export async function POST(req: Request) {
     };
 
     // Amounts in dollars
-    const subtotal = centsToDollars(session.amount_subtotal);
-    const total = centsToDollars(session.amount_total);
-    const tax = centsToDollars(session.total_details?.amount_tax ?? 0);
-    const shipping = centsToDollars(session.total_details?.amount_shipping ?? 0);
+    const subtotal = fromCents(session.amount_subtotal);
+    const total = fromCents(session.amount_total);
+    const tax = fromCents(session.total_details?.amount_tax ?? 0);
+    const shipping = fromCents(session.total_details?.amount_shipping ?? 0);
 
     // --- FULFILLMENT WITH ERROR RECOVERY ---
     // Order of operations: create order → consume reservation → decrement stock → email

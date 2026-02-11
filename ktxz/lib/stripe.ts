@@ -33,3 +33,16 @@ export const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || "";
 export function toCents(amount: number): number {
   return Math.round(amount * 100);
 }
+
+/** Helper: cents -> dollars */
+export function fromCents(cents: number | null | undefined): number {
+  const n = typeof cents === "number" ? cents : 0;
+  return Math.round(n) / 100;
+}
+
+/** Like getStripe() but throws if Stripe is not configured. */
+export function mustGetStripe(): Stripe {
+  const stripe = getStripe();
+  if (!stripe) throw new Error("Stripe is not configured (missing STRIPE_SECRET_KEY)");
+  return stripe;
+}

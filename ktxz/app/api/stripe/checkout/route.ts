@@ -6,19 +6,10 @@ import Card from "@/models/Card";
 import { auth } from "@/auth";
 import { RateLimiters, rateLimitResponse } from "@/lib/rateLimit";
 import { errorResponse } from "@/lib/apiResponse";
+import { mustGetStripe, toCents } from "@/lib/stripe";
+import { mustGetEnv } from "@/lib/envValidation";
 
 export const runtime = "nodejs";
-
-function mustGetEnv(name: string) {
-  const v = process.env[name];
-  if (!v) throw new Error(`Missing ${name} env var.`);
-  return v;
-}
-
-function dollarsToCents(dollars: number) {
-  // Safe conversion for 2-decimal USD style pricing
-  return Math.round((Number(dollars) || 0) * 100);
-}
 
 type CheckoutBody = {
   items: Array<{
@@ -39,13 +30,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
-    const stripeSecret = mustGetEnv("STRIPE_SECRET_KEY");
-    const siteUrl = mustGetEnv("NEXTAUTH_URL"); // you already use this for password reset links
-
-    const stripe = new Stripe(stripeSecret, {
-      // NOTE: Must match the Stripe SDK's allowed literal type union for apiVersion.
-      apiVersion: "2026-01-28.clover",
-    });
+    const siteUrl = mustGetEnv("NEXTAUTH_URL");
+    const stripe = mustGetStripe();
 
     const body = (await req.json()) as CheckoutBody;
 
@@ -89,7 +75,7 @@ export async function POST(req: Request) {
 
       if (inventoryType === "single") {
         // force quantity = 1 for singles
-        const unitPriceCents = dollarsToCents(Number(card.price));
+        const unitPriceCents = toCents(Number(card.price));
         lineItems.push({
           quantity: 1,
           price_data: {
@@ -127,7 +113,7 @@ export async function POST(req: Request) {
         );
       }
 
-      const unitPriceCents = dollarsToCents(Number(card.price));
+      const unitPriceCents = toCents(Number(card.price));
       lineItems.push({
         quantity: qty,
         price_data: {
