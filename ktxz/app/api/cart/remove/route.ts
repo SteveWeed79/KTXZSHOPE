@@ -41,7 +41,7 @@ export async function POST(req: Request) {
   if (!rl.success) return rateLimitResponse(rl);
 
   const session = await auth();
-  const userId = session?.user ? (session.user as { id?: string }).id : null;
+  const userId = session?.user?.id ?? null;
 
   const form = await req.formData();
   const cardId = String(form.get("cardId") || "").trim();

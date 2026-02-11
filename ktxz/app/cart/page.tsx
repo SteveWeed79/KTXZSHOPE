@@ -11,7 +11,7 @@ function money(n: number) {
 
 export default async function CartPage() {
   const session = await auth();
-  const userId = session?.user ? (session.user as any).id : null;
+  const userId = session?.user?.id ?? null;
 
   // Load cart from database or cookie
   const cart = await loadCart(userId);
