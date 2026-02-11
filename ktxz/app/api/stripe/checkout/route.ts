@@ -5,6 +5,7 @@ import dbConnect from "@/lib/dbConnect";
 import Card from "@/models/Card";
 import { auth } from "@/auth";
 import { RateLimiters, rateLimitResponse } from "@/lib/rateLimit";
+import { errorResponse } from "@/lib/apiResponse";
 
 export const runtime = "nodejs";
 
@@ -170,7 +171,7 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ url: checkoutSession.url });
-  } catch (err: any) {
-    return NextResponse.json({ error: err?.message || "Checkout error" }, { status: 500 });
+  } catch (error) {
+    return errorResponse(error);
   }
 }

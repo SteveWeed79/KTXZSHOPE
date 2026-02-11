@@ -14,6 +14,7 @@ import { requireAdmin } from "@/lib/requireAdmin";
 import dbConnect from "@/lib/dbConnect";
 import Order from "@/models/Order";
 import Card from "@/models/Card";
+import { errorResponse } from "@/lib/apiResponse";
 
 async function restoreInventory(orderItems: Array<{ card: string; quantity: number }>) {
   for (const item of orderItems) {
@@ -145,19 +146,12 @@ export async function POST(req: NextRequest) {
       inventoryRestored,
     });
   } catch (error) {
-    console.error("Error processing refund:", error);
-
-    // Handle Stripe-specific errors
     if (error instanceof Stripe.errors.StripeError) {
       return NextResponse.json(
-        { error: `Stripe error: ${error.message}` },
+        { error: `Stripe error: ${error.message}`, code: "STRIPE_ERROR" },
         { status: 400 }
       );
     }
-
-    return NextResponse.json(
-      { error: "Failed to process refund" },
-      { status: 500 }
-    );
+    return errorResponse(error);
   }
 }

@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/requireAdmin";
 import dbConnect from "@/lib/dbConnect";
 import Order from "@/models/Order";
+import { errorResponse } from "@/lib/apiResponse";
 
 export async function GET(_req: NextRequest) {
   try {
@@ -34,7 +35,6 @@ export async function GET(_req: NextRequest) {
       count: orders.length,
     });
   } catch (error) {
-    console.error("Error fetching orders:", error);
-    return NextResponse.json({ error: "Failed to fetch orders" }, { status: 500 });
+    return errorResponse(error);
   }
 }

@@ -15,6 +15,7 @@ import dbConnect from "@/lib/dbConnect";
 import Order from "@/models/Order";
 import { generateOrderConfirmationEmail } from "@/lib/emails/orderConfirmation";
 import { generateShippingNotificationEmail } from "@/lib/emails/shippingNotification";
+import { errorResponse } from "@/lib/apiResponse";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -98,7 +99,7 @@ export async function POST(req: NextRequest) {
     if (!emailResult.data) {
       console.error("Resend error:", emailResult.error);
       return NextResponse.json(
-        { error: "Failed to send email", details: emailResult.error },
+        { error: "Failed to send email", code: "EMAIL_SEND_FAILED" },
         { status: 500 }
       );
     }
@@ -110,11 +111,7 @@ export async function POST(req: NextRequest) {
       message: `${emailType} email sent successfully`,
       emailId: emailResult.data.id,
     });
-  } catch (error: unknown) {
-    console.error("Error sending email:", error);
-    return NextResponse.json(
-      { error: "Failed to send email", details: error instanceof Error ? error.message : "Unknown error" },
-      { status: 500 }
-    );
+  } catch (error) {
+    return errorResponse(error);
   }
 }

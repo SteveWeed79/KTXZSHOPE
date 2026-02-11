@@ -15,6 +15,7 @@ import dbConnect from "@/lib/dbConnect";
 import Order from "@/models/Order";
 import Card from "@/models/Card";
 import { generateShippingNotificationEmail } from "@/lib/emails/shippingNotification";
+import { errorResponse } from "@/lib/apiResponse";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const EMAIL_FROM = process.env.EMAIL_FROM || "onboarding@resend.dev";
@@ -153,10 +154,6 @@ export async function POST(req: NextRequest) {
       inventoryRestored,
     });
   } catch (error) {
-    console.error("Error updating order status:", error);
-    return NextResponse.json(
-      { error: "Failed to update order status" },
-      { status: 500 }
-    );
+    return errorResponse(error);
   }
 }
