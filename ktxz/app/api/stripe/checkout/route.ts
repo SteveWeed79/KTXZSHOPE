@@ -146,7 +146,7 @@ export async function POST(req: Request) {
     }
 
     // Create checkout session
-    const session = await stripe.checkout.sessions.create({
+    const checkoutSession = await stripe.checkout.sessions.create({
       mode: "payment",
       line_items: lineItems,
 
@@ -168,7 +168,7 @@ export async function POST(req: Request) {
       cancel_url: `${siteUrl}/cart?canceled=1`,
     });
 
-    return NextResponse.json({ url: session.url });
+    return NextResponse.json({ url: checkoutSession.url });
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || "Checkout error" }, { status: 500 });
   }

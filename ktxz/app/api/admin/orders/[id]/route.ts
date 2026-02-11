@@ -15,15 +15,17 @@ import Order from "@/models/Order";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const adminResult = await requireAdmin();
     if (adminResult instanceof NextResponse) return adminResult;
 
+    const { id } = await params;
+
     await dbConnect();
 
-    const order = await Order.findById(params.id)
+    const order = await Order.findById(id)
       .populate({
         path: "items.card",
         select: "name image price rarity",

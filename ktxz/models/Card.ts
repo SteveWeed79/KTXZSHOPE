@@ -88,5 +88,5 @@ if (process.env.NODE_ENV !== "production") {
   }
 }
 
-const Card = (models as Record<string, unknown>).Card || model("Card", CardSchema);
+const Card = models.Card || model("Card", CardSchema);
 export default Card;

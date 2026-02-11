@@ -49,7 +49,7 @@ export async function deleteBrand(formData: FormData) {
   await dbConnect();
 
   const brandId = formData.get("brandId") as string;
-  const hasCards = await Card.exists({ brand: brandId });
+  const hasCards = await Card.countDocuments({ brand: brandId });
   if (hasCards) throw new Error("Cannot delete category with active cards.");
 
   await Brand.findByIdAndDelete(brandId);

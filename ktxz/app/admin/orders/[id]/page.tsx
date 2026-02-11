@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, use } from "react";
 import Link from "next/link";
 import { StatusStepper } from "@/components/StatusStepper";
 import { ArrowLeft, Printer, Mail, Package, Send } from "lucide-react";
@@ -39,7 +39,8 @@ interface Order {
 const inputClass =
   "w-full px-4 py-2 bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:ring-1 focus:ring-primary focus:border-primary transition-all";
 
-export default function OrderDetailPage({ params }: { params: { id: string } }) {
+export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [trackingNumber, setTrackingNumber] = useState("");
@@ -56,7 +57,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
   const fetchOrder = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/admin/orders/${params.id}`);
+      const response = await fetch(`/api/admin/orders/${id}`);
       if (!response.ok) throw new Error("Failed to fetch order");
       const data = await response.json();
       setOrder(data.order);
@@ -68,7 +69,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
     } finally {
       setLoading(false);
     }
-  }, [params.id]);
+  }, [id]);
 
   useEffect(() => { fetchOrder(); }, [fetchOrder]);
 
@@ -79,7 +80,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
       const response = await fetch("/api/admin/orders/update-status", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId: params.id, status: newStatus }),
+        body: JSON.stringify({ orderId: id, status: newStatus }),
       });
       if (!response.ok) throw new Error("Failed to update status");
       await fetchOrder();
@@ -98,7 +99,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
       const response = await fetch("/api/admin/orders/update-tracking", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId: params.id, trackingNumber, carrier, notes }),
+        body: JSON.stringify({ orderId: id, trackingNumber, carrier, notes }),
       });
       if (!response.ok) throw new Error("Failed to update tracking");
       await fetchOrder();
@@ -117,7 +118,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
       const response = await fetch("/api/admin/orders/send-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId: params.id, emailType }),
+        body: JSON.stringify({ orderId: id, emailType }),
       });
       if (!response.ok) throw new Error("Failed to send email");
       alert("Email sent successfully!");
@@ -138,7 +139,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
       const response = await fetch("/api/admin/orders/refund", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId: params.id, amount: isPartial ? amt : undefined, reason: refundReason || undefined }),
+        body: JSON.stringify({ orderId: id, amount: isPartial ? amt : undefined, reason: refundReason || undefined }),
       });
       const data = await response.json();
       if (!response.ok) { alert(data.error || "Failed to process refund"); return; }
