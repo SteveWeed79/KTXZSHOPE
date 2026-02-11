@@ -17,24 +17,23 @@ import Card from "@/models/Card";
 
 async function restoreInventory(orderItems: Array<{ card: string; quantity: number }>) {
   for (const item of orderItems) {
-    const card = await Card.findById(item.card);
-    if (!card) continue;
+    // Bulk: atomic increment
+    const bulkResult = await Card.findOneAndUpdate(
+      { _id: item.card, inventoryType: "bulk" },
+      {
+        $inc: { stock: item.quantity },
+        $set: { status: "active", isActive: true },
+      },
+      { new: true }
+    );
 
-    const inventoryType = card.inventoryType || "single";
+    if (bulkResult) continue;
 
-    if (inventoryType === "bulk") {
-      card.stock = (card.stock || 0) + item.quantity;
-      if (card.status === "sold") {
-        card.status = "active";
-        card.isActive = true;
-      }
-    } else {
-      card.stock = 1;
-      card.status = "active";
-      card.isActive = true;
-    }
-
-    await card.save();
+    // Single: restore to 1
+    await Card.findOneAndUpdate(
+      { _id: item.card },
+      { $set: { stock: 1, status: "active", isActive: true } }
+    );
   }
 }
 

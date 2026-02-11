@@ -78,6 +78,32 @@ async function claimStripeEventOnce(eventId: string) {
   return { alreadyClaimed: !inserted };
 }
 
+/**
+ * Release a claimed event so Stripe can retry delivery.
+ * Called when we claimed the event but then failed to process it.
+ */
+async function unclaimStripeEvent(eventId: string) {
+  const col = mongoose.connection.collection("stripe_events") as Collection<StripeEventDoc>;
+  await col.deleteOne({ _id: eventId });
+}
+
+/**
+ * Restore stock for items that were decremented.
+ * Used as a compensating transaction when order processing fails after stock update.
+ */
+async function restoreStock(items: Array<{ cardId: string; qty: number }>) {
+  for (const it of items) {
+    const qty = Math.max(1, Number(it.qty || 1));
+    await Card.findOneAndUpdate(
+      { _id: it.cardId },
+      {
+        $inc: { stock: qty },
+        $set: { status: "active", isActive: true },
+      }
+    );
+  }
+}
+
 async function markCardsSoldOrDecrementStock(items: Array<{ cardId: string; qty: number }>) {
   for (const it of items) {
     const qty = Math.max(1, Number(it.qty || 1));
@@ -303,40 +329,57 @@ export async function POST(req: Request) {
     const tax = centsToDollars(session.total_details?.amount_tax ?? 0);
     const shipping = centsToDollars(session.total_details?.amount_shipping ?? 0);
 
-    // Create order
-    const order = await Order.create({
-      user: user?._id,
-      email,
-      items: purchased.map((p) => ({
-        card: new mongoose.Types.ObjectId(p.cardId),
-        name: p.name,
-        image: p.image,
-        brandName: p.brandName,
-        rarity: p.rarity,
-        unitPrice: p.unitPrice,
-        quantity: p.qty,
-      })),
-      amounts: { subtotal, tax, shipping, total },
-      currency: (session.currency || "usd").toLowerCase(),
+    // --- FULFILLMENT WITH ERROR RECOVERY ---
+    // Order of operations: create order → consume reservation → decrement stock → email
+    // If order creation fails, unclaim the event so Stripe retries.
+    // If stock decrement fails, flag the order for manual review.
 
-      stripeCheckoutSessionId: sessionId,
-      stripePaymentIntentId: paymentIntentId || undefined,
-      stripeCustomerId: customerId || undefined,
+    let order: any;
+    try {
+      order = await Order.create({
+        user: user?._id,
+        email,
+        items: purchased.map((p) => ({
+          card: new mongoose.Types.ObjectId(p.cardId),
+          name: p.name,
+          image: p.image,
+          brandName: p.brandName,
+          rarity: p.rarity,
+          unitPrice: p.unitPrice,
+          quantity: p.qty,
+        })),
+        amounts: { subtotal, tax, shipping, total },
+        currency: (session.currency || "usd").toLowerCase(),
 
-      shippingAddress,
-      billingAddress,
+        stripeCheckoutSessionId: sessionId,
+        stripePaymentIntentId: paymentIntentId || undefined,
+        stripeCustomerId: customerId || undefined,
 
-      status: paid ? "paid" : "pending",
-      paidAt: paid ? new Date() : undefined,
+        shippingAddress,
+        billingAddress,
 
-      trackingNumber: "",
-      carrier: "",
-      notes: paid
-        ? "Paid via Stripe. Awaiting fulfillment."
-        : "Checkout completed but not marked paid yet.",
-    });
+        status: paid ? "paid" : "pending",
+        paidAt: paid ? new Date() : undefined,
 
-    // Mark reservation as consumed and update inventory
+        trackingNumber: "",
+        carrier: "",
+        notes: paid
+          ? "Paid via Stripe. Awaiting fulfillment."
+          : "Checkout completed but not marked paid yet.",
+      });
+    } catch (orderErr: any) {
+      // Order creation failed — unclaim event so Stripe will retry
+      console.error("Order creation failed, unclaiming event for retry:", orderErr);
+      await unclaimStripeEvent(event.id);
+      return NextResponse.json(
+        { error: "Order creation failed — will retry" },
+        { status: 500 }
+      );
+    }
+
+    // Consume reservation + update inventory
+    const stockItems = purchased.map((p) => ({ cardId: p.cardId, qty: p.qty }));
+
     if (paid) {
       const reservationId = session.metadata?.reservationId;
       if (reservationId) {
@@ -346,10 +389,26 @@ export async function POST(req: Request) {
         );
       }
 
-      await markCardsSoldOrDecrementStock(purchased.map((p) => ({ cardId: p.cardId, qty: p.qty })));
+      try {
+        await markCardsSoldOrDecrementStock(stockItems);
+      } catch (stockErr: any) {
+        // Stock update failed — order exists but inventory not updated
+        // Flag for manual review rather than crashing (payment already succeeded)
+        console.error("Stock decrement failed after order creation:", stockErr);
+        await Order.updateOne(
+          { _id: order._id },
+          {
+            $set: {
+              notes: "NEEDS REVIEW: Stock decrement failed after payment. " +
+                     `Error: ${stockErr?.message || "unknown"}. ` +
+                     "Verify inventory manually.",
+            },
+          }
+        );
+      }
     }
 
-    // Send confirmation email automatically if paid
+    // Send confirmation email (non-critical — never block the webhook response)
     let emailSent = false;
     if (paid) {
       emailSent = await sendOrderConfirmationEmail(order.toObject());
