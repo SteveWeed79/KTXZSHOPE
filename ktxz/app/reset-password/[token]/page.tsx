@@ -3,15 +3,15 @@ import { resetPassword } from "../../login/resetActions";
 export default async function ResetPasswordPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   return (
-    <main className="min-h-screen bg-black flex items-center justify-center p-6">
-      <div className="w-full max-w-md bg-gray-900/40 p-8 rounded-3xl border border-gray-800">
-        <h1 className="text-2xl font-black text-white uppercase mb-6">New Password</h1>
+    <main className="min-h-screen flex items-center justify-center p-6">
+      <div className="w-full max-w-md bg-card p-8 rounded-2xl border border-border">
+        <h1 className="text-2xl brand-heading mb-6">New Password</h1>
 
         <form action={resetPassword} className="space-y-4">
           <input type="hidden" name="token" value={token} />
-          <input name="password" type="password" placeholder="NEW PASSWORD" required className="w-full bg-black border border-gray-800 p-4 rounded-xl outline-none focus:border-green-500 text-sm" />
-          <input name="confirmPassword" type="password" placeholder="CONFIRM NEW PASSWORD" required className="w-full bg-black border border-gray-800 p-4 rounded-xl outline-none focus:border-green-500 text-sm" />
-          <button className="w-full bg-green-600 text-white font-black py-4 rounded-xl hover:bg-green-400 transition-all uppercase text-xs">
+          <input name="password" type="password" placeholder="NEW PASSWORD" required className="w-full bg-background border border-border p-4 rounded-xl outline-none focus:ring-1 focus:ring-primary focus:border-primary text-sm text-foreground placeholder:text-muted-foreground" />
+          <input name="confirmPassword" type="password" placeholder="CONFIRM NEW PASSWORD" required className="w-full bg-background border border-border p-4 rounded-xl outline-none focus:ring-1 focus:ring-primary focus:border-primary text-sm text-foreground placeholder:text-muted-foreground" />
+          <button className="w-full btn-primary py-4">
             Update Password
           </button>
         </form>

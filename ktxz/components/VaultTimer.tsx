@@ -41,7 +41,7 @@ const VaultTimer: React.FC<VaultTimerProps> = ({ expiryDate }) => {
 
   if (timeLeft === "Expired") {
     return (
-      <span className="text-[9px] font-bold uppercase tracking-wider text-orange-600 dark:text-orange-300 bg-orange-100 dark:bg-orange-950/60 px-2 py-1 rounded border border-orange-300 dark:border-orange-500/20">
+      <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground bg-muted px-2 py-1 rounded border border-border">
         Expired
       </span>
     );

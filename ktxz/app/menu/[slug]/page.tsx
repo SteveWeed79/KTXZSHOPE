@@ -3,6 +3,7 @@ import Brand from "@/models/Brand";
 import Card from "@/models/Card";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import ProductCard from "@/components/ProductCard";
 
 export default async function MenuPage({
   params,
@@ -15,13 +16,6 @@ export default async function MenuPage({
   const brand = await Brand.findOne({ slug });
   if (!brand) notFound();
 
-  // Public inventory rules (same as shop):
-  // - isActive not false
-  // - status is "active" or missing
-  // - inventoryType:
-  //    - missing treated as single
-  //    - single allowed
-  //    - bulk only if stock > 0
   const cards = await Card.find({
     brand: brand._id,
     $and: [
@@ -35,70 +29,63 @@ export default async function MenuPage({
         ],
       },
     ],
-  }).sort({ createdAt: -1 });
+  })
+    .populate("brand")
+    .sort({ createdAt: -1 })
+    .lean();
 
   return (
-    <main className="min-h-screen bg-black text-white p-12">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between gap-6 mb-8">
+    <main className="min-h-screen section-spacing">
+      <div className="max-w-[1400px] mx-auto px-6">
+        <div className="flex items-center justify-between gap-6 mb-10">
           <div>
-            <h1 className="text-5xl font-bold border-b border-gray-800 pb-4">
+            <h1 className="text-4xl brand-heading">
               {brand.name} Collection
             </h1>
-            <p className="text-gray-600 text-[10px] uppercase font-mono tracking-[0.3em] mt-3">
-              Active listings only
-            </p>
+            <div className="flex items-center gap-4 mt-2">
+              <span className="h-px w-12 bg-primary" />
+              <p className="text-muted-foreground text-sm">
+                {cards.length} {cards.length === 1 ? "card" : "cards"} available
+              </p>
+            </div>
           </div>
 
           <Link
             href="/shop"
-            className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 hover:text-white transition-colors"
+            className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground transition-colors"
           >
-            ← Back to Shop
+            Back to Shop
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-          {cards.length === 0 ? (
-            <p className="text-gray-500">No active listings in this category yet.</p>
-          ) : (
-            cards.map((card: any) => (
-              <div
+        {cards.length === 0 ? (
+          <div className="border border-dashed border-border rounded-2xl p-12 text-center">
+            <p className="text-muted-foreground text-sm">
+              No active listings in this category yet.
+            </p>
+            <Link href="/shop" className="btn-primary inline-block mt-8">
+              Browse Store
+            </Link>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 grid-spacing">
+            {cards.map((card: any) => (
+              <ProductCard
                 key={card._id.toString()}
-                className="group p-4 border border-gray-800 rounded-xl bg-gray-900/50 hover:border-green-500 transition-all duration-300 shadow-xl"
-              >
-                <div className="aspect-[2.5/3.5] bg-gray-800 rounded-lg mb-4 flex items-center justify-center overflow-hidden border border-gray-700">
-                  {card.image ? (
-                    <img
-                      src={card.image}
-                      alt={card.name}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                    />
-                  ) : (
-                    <span className="text-gray-600">No Image</span>
-                  )}
-                </div>
-
-                <h2 className="text-xl font-bold group-hover:text-green-400 transition-colors">
-                  {card.name}
-                </h2>
-
-                <div className="flex justify-between items-center mt-2">
-                  <p className="text-2xl font-mono text-green-500">${card.price}</p>
-                  <span className="text-xs uppercase tracking-widest text-gray-500 px-2 py-1 border border-gray-700 rounded">
-                    {card.rarity}
-                  </span>
-                </div>
-
-                <Link href={`/card/${card._id.toString()}`} className="block">
-                  <button className="w-full mt-4 py-2 bg-white text-black font-bold rounded hover:bg-green-500 hover:text-white transition-all">
-                    VIEW DETAILS
-                  </button>
-                </Link>
-              </div>
-            ))
-          )}
-        </div>
+                card={{
+                  _id: card._id.toString(),
+                  name: card.name,
+                  image: card.image,
+                  price: card.price,
+                  rarity: card.rarity,
+                  brand: card.brand,
+                  isVault: card.isVault,
+                  vaultExpiryDate: card.vaultExpiryDate,
+                }}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </main>
   );

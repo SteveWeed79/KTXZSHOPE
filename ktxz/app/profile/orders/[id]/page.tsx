@@ -32,11 +32,11 @@ function formatMoney(amount: number) {
 
 function getStatusColor(status: string) {
   const colors = {
-    pending: "text-yellow-500 bg-yellow-950/20 border-yellow-900/50",
-    paid: "text-green-500 bg-green-950/20 border-green-900/50",
-    fulfilled: "text-blue-500 bg-blue-950/20 border-blue-900/50",
-    cancelled: "text-gray-500 bg-gray-900/20 border-gray-800/50",
-    refunded: "text-orange-500 bg-orange-950/20 border-orange-900/50",
+    pending: "text-primary/70 bg-primary/10 border-primary/20",
+    paid: "text-primary bg-primary/10 border-primary/30",
+    fulfilled: "text-foreground bg-muted border-border",
+    cancelled: "text-muted-foreground bg-muted border-border",
+    refunded: "text-muted-foreground bg-muted border-border",
   };
   return colors[status as keyof typeof colors] || colors.pending;
 }
@@ -79,10 +79,10 @@ export default async function OrderDetailPage({
   return (
     <main className="py-12 max-w-6xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-10 border-b border-gray-900 pb-6">
+      <div className="flex items-center justify-between mb-10 border-b border-border pb-6">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-4xl font-black italic uppercase tracking-tighter text-white">
+            <h1 className="text-4xl brand-heading-italic">
               Order #{orderId.slice(-8)}
             </h1>
             <span
@@ -93,14 +93,14 @@ export default async function OrderDetailPage({
               {status}
             </span>
           </div>
-          <p className="text-gray-500 font-mono text-[10px] tracking-[0.3em] uppercase">
+          <p className="text-muted-foreground font-mono text-[10px] tracking-[0.3em] uppercase">
             Placed: {formatDate(order.createdAt)}
           </p>
         </div>
 
         <Link
           href="/profile/orders"
-          className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 hover:text-white transition-colors"
+          className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground transition-colors"
         >
           ← Back to Orders
         </Link>
@@ -110,8 +110,8 @@ export default async function OrderDetailPage({
         {/* Main Content - Order Items */}
         <section className="lg:col-span-8 space-y-6">
           {/* Items */}
-          <div className="border border-gray-900 bg-black/40 rounded-2xl p-6">
-            <h2 className="text-xs font-black uppercase tracking-widest text-gray-500 mb-6">
+          <div className="border border-border bg-card rounded-2xl p-6">
+            <h2 className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-6">
               Items Secured
             </h2>
 
@@ -119,11 +119,11 @@ export default async function OrderDetailPage({
               {items.map((item: any, idx: number) => (
                 <div
                   key={idx}
-                  className="flex items-start gap-4 border-b border-gray-900 pb-4 last:border-b-0 last:pb-0"
+                  className="flex items-start gap-4 border-b border-border pb-4 last:border-b-0 last:pb-0"
                 >
                   {/* Image */}
                   <div className="w-16 shrink-0">
-                    <div className="aspect-[2.5/3.5] bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+                    <div className="aspect-[2.5/3.5] bg-muted border border-border rounded-xl overflow-hidden">
                       {item.image ? (
                         <img
                           src={item.image}
@@ -131,7 +131,7 @@ export default async function OrderDetailPage({
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-700 font-black text-xs">
+                        <div className="w-full h-full flex items-center justify-center text-muted-foreground font-black text-xs">
                           TCG
                         </div>
                       )}
@@ -140,23 +140,23 @@ export default async function OrderDetailPage({
 
                   {/* Details */}
                   <div className="flex-1">
-                    <p className="text-white font-black uppercase tracking-tight text-sm">
+                    <p className="text-foreground font-black uppercase tracking-tight text-sm">
                       {item.name}
                     </p>
-                    <p className="text-gray-500 text-[10px] font-mono uppercase tracking-[0.3em] mt-1">
+                    <p className="text-muted-foreground text-[10px] font-mono uppercase tracking-[0.3em] mt-1">
                       {item.rarity} // {item.brandName}
                     </p>
-                    <p className="text-gray-600 text-[10px] font-mono uppercase tracking-[0.3em] mt-2">
+                    <p className="text-muted-foreground text-[10px] font-mono uppercase tracking-[0.3em] mt-2">
                       Qty: {item.quantity}
                     </p>
                   </div>
 
                   {/* Price */}
                   <div className="text-right">
-                    <p className="text-white font-bold">
+                    <p className="text-foreground font-bold">
                       {formatMoney(item.unitPrice)}
                     </p>
-                    <p className="text-gray-600 text-[10px] font-mono uppercase tracking-[0.3em] mt-1">
+                    <p className="text-muted-foreground text-[10px] font-mono uppercase tracking-[0.3em] mt-1">
                       Unit
                     </p>
                   </div>
@@ -167,36 +167,36 @@ export default async function OrderDetailPage({
 
           {/* Tracking (if available) */}
           {order.trackingNumber && (
-            <div className="border border-green-900/50 bg-green-950/20 rounded-2xl p-6">
-              <h2 className="text-xs font-black uppercase tracking-widest text-green-500 mb-4">
+            <div className="border border-primary/30 bg-primary/5 rounded-2xl p-6">
+              <h2 className="text-xs font-black uppercase tracking-widest text-primary mb-4">
                 Tracking Information
               </h2>
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-gray-500 uppercase font-mono">
+                  <span className="text-[10px] text-muted-foreground uppercase font-mono">
                     Carrier
                   </span>
-                  <span className="text-[10px] text-white font-mono uppercase">
+                  <span className="text-[10px] text-foreground font-mono uppercase">
                     {order.carrier || "N/A"}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-gray-500 uppercase font-mono">
+                  <span className="text-[10px] text-muted-foreground uppercase font-mono">
                     Tracking Number
                   </span>
-                  <span className="text-[10px] text-green-400 font-mono">
+                  <span className="text-[10px] text-primary font-mono">
                     {order.trackingNumber}
                   </span>
                 </div>
 
                 {order.fulfilledAt && (
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-gray-500 uppercase font-mono">
+                    <span className="text-[10px] text-muted-foreground uppercase font-mono">
                       Shipped
                     </span>
-                    <span className="text-[10px] text-white font-mono">
+                    <span className="text-[10px] text-foreground font-mono">
                       {formatDate(order.fulfilledAt)}
                     </span>
                   </div>
@@ -206,12 +206,12 @@ export default async function OrderDetailPage({
           )}
 
           {/* Shipping Address */}
-          <div className="border border-gray-900 bg-black/40 rounded-2xl p-6">
-            <h2 className="text-xs font-black uppercase tracking-widest text-gray-500 mb-4">
+          <div className="border border-border bg-card rounded-2xl p-6">
+            <h2 className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-4">
               Shipping Address
             </h2>
 
-            <div className="text-[10px] text-white font-mono leading-relaxed">
+            <div className="text-[10px] text-foreground font-mono leading-relaxed">
               <p>{shippingAddr.name || "—"}</p>
               <p>{shippingAddr.line1 || "—"}</p>
               {shippingAddr.line2 && <p>{shippingAddr.line2}</p>}
@@ -227,60 +227,60 @@ export default async function OrderDetailPage({
         {/* Sidebar - Summary */}
         <aside className="lg:col-span-4 space-y-6">
           {/* Order Summary */}
-          <div className="border border-gray-900 bg-black/40 rounded-2xl p-6 sticky top-24">
-            <h2 className="text-xs font-black uppercase tracking-widest text-gray-500 mb-6">
+          <div className="border border-border bg-card rounded-2xl p-6 sticky top-24">
+            <h2 className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-6">
               Order Summary
             </h2>
 
             <div className="space-y-3">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Subtotal</span>
-                <span className="text-white font-bold">
+                <span className="text-muted-foreground">Subtotal</span>
+                <span className="text-foreground font-bold">
                   {formatMoney(amounts.subtotal)}
                 </span>
               </div>
 
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Shipping</span>
-                <span className="text-white font-bold">
+                <span className="text-muted-foreground">Shipping</span>
+                <span className="text-foreground font-bold">
                   {formatMoney(amounts.shipping)}
                 </span>
               </div>
 
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Tax</span>
-                <span className="text-white font-bold">
+                <span className="text-muted-foreground">Tax</span>
+                <span className="text-foreground font-bold">
                   {formatMoney(amounts.tax)}
                 </span>
               </div>
 
-              <div className="h-px bg-gray-900 my-4" />
+              <div className="h-px bg-muted my-4" />
 
               <div className="flex justify-between">
-                <span className="text-white font-black uppercase tracking-widest text-[10px]">
+                <span className="text-foreground font-black uppercase tracking-widest text-[10px]">
                   Total
                 </span>
-                <span className="text-white font-black text-xl">
+                <span className="text-foreground font-black text-xl">
                   {formatMoney(amounts.total)}
                 </span>
               </div>
             </div>
 
             {/* Status Timeline */}
-            <div className="mt-8 pt-6 border-t border-gray-900">
-              <h3 className="text-[9px] font-black uppercase tracking-widest text-gray-600 mb-4">
+            <div className="mt-8 pt-6 border-t border-border">
+              <h3 className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-4">
                 Status Timeline
               </h3>
 
               <div className="space-y-3">
                 {order.paidAt && (
                   <div className="flex items-start gap-2">
-                    <span className="text-green-500 mt-0.5">✓</span>
+                    <span className="text-primary mt-0.5">✓</span>
                     <div>
-                      <p className="text-[9px] text-white font-bold uppercase">
+                      <p className="text-[9px] text-foreground font-bold uppercase">
                         Payment Confirmed
                       </p>
-                      <p className="text-[9px] text-gray-600 font-mono">
+                      <p className="text-[9px] text-muted-foreground font-mono">
                         {formatDate(order.paidAt)}
                       </p>
                     </div>
@@ -289,12 +289,12 @@ export default async function OrderDetailPage({
 
                 {order.fulfilledAt && (
                   <div className="flex items-start gap-2">
-                    <span className="text-green-500 mt-0.5">✓</span>
+                    <span className="text-primary mt-0.5">✓</span>
                     <div>
-                      <p className="text-[9px] text-white font-bold uppercase">
+                      <p className="text-[9px] text-foreground font-bold uppercase">
                         Order Shipped
                       </p>
-                      <p className="text-[9px] text-gray-600 font-mono">
+                      <p className="text-[9px] text-muted-foreground font-mono">
                         {formatDate(order.fulfilledAt)}
                       </p>
                     </div>
@@ -303,12 +303,12 @@ export default async function OrderDetailPage({
 
                 {order.cancelledAt && (
                   <div className="flex items-start gap-2">
-                    <span className="text-red-500 mt-0.5">✕</span>
+                    <span className="text-destructive mt-0.5">✕</span>
                     <div>
-                      <p className="text-[9px] text-white font-bold uppercase">
+                      <p className="text-[9px] text-foreground font-bold uppercase">
                         Order Cancelled
                       </p>
-                      <p className="text-[9px] text-gray-600 font-mono">
+                      <p className="text-[9px] text-muted-foreground font-mono">
                         {formatDate(order.cancelledAt)}
                       </p>
                     </div>
@@ -317,12 +317,12 @@ export default async function OrderDetailPage({
 
                 {order.refundedAt && (
                   <div className="flex items-start gap-2">
-                    <span className="text-orange-500 mt-0.5">↻</span>
+                    <span className="text-muted-foreground mt-0.5">↻</span>
                     <div>
-                      <p className="text-[9px] text-white font-bold uppercase">
+                      <p className="text-[9px] text-foreground font-bold uppercase">
                         Payment Refunded
                       </p>
-                      <p className="text-[9px] text-gray-600 font-mono">
+                      <p className="text-[9px] text-muted-foreground font-mono">
                         {formatDate(order.refundedAt)}
                       </p>
                     </div>

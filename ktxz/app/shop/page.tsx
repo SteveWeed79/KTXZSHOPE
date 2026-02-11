@@ -104,7 +104,7 @@ export default async function ShopPage({
 
         <section className="flex-1">
           <header className="mb-10">
-            <h1 className="text-4xl font-bold tracking-tighter uppercase">
+            <h1 className="text-4xl brand-heading">
               {filters.brand ? "Filtered Results" : "Store"}
             </h1>
             <div className="flex items-center gap-4 mt-2">
@@ -117,7 +117,7 @@ export default async function ShopPage({
 
           {marketplaceCards.length > 0 ? (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 grid-spacing">
                 {marketplaceCards.map((card: any) => (
                   <ProductCard key={card._id} card={card} />
                 ))}

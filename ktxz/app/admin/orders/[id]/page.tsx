@@ -301,10 +301,10 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               <h2 className="text-lg font-semibold mb-4">Status Actions</h2>
               <div className="space-y-2">
                 {order.status === "pending" && (
-                  <button onClick={() => updateStatus("paid")} disabled={updating} className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Mark as Paid</button>
+                  <button onClick={() => updateStatus("paid")} disabled={updating} className="w-full py-2 bg-primary text-primary-foreground rounded-lg hover:brightness-90 font-medium">Mark as Paid</button>
                 )}
                 {order.status === "paid" && (
-                  <button onClick={() => updateStatus("fulfilled")} disabled={updating} className="w-full py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium">Mark as Fulfilled</button>
+                  <button onClick={() => updateStatus("fulfilled")} disabled={updating} className="w-full py-2 bg-primary text-primary-foreground rounded-lg hover:brightness-90 font-medium">Mark as Fulfilled</button>
                 )}
                 {order.status !== "cancelled" && order.status !== "refunded" && (
                   <button onClick={() => updateStatus("cancelled")} disabled={updating} className="w-full py-2 bg-muted text-foreground border border-border rounded-lg hover:bg-muted/80 font-medium">Cancel Order</button>
@@ -374,7 +374,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               <h2 className="text-lg font-semibold mb-4">Timeline</h2>
               <div className="space-y-4">
                 <div className="flex items-start gap-3">
-                  <div className="w-2 h-2 mt-2 rounded-full bg-blue-500" />
+                  <div className="w-2 h-2 mt-2 rounded-full bg-primary" />
                   <div>
                     <p className="text-sm font-medium">Order Placed</p>
                     <p className="text-xs text-muted-foreground">{new Date(order.createdAt).toLocaleString()}</p>
@@ -382,7 +382,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                 </div>
                 {order.paidAt && (
                   <div className="flex items-start gap-3">
-                    <div className="w-2 h-2 mt-2 rounded-full bg-green-500" />
+                    <div className="w-2 h-2 mt-2 rounded-full bg-primary" />
                     <div>
                       <p className="text-sm font-medium">Payment Received</p>
                       <p className="text-xs text-muted-foreground">{new Date(order.paidAt).toLocaleString()}</p>

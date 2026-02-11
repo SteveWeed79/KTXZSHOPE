@@ -23,7 +23,7 @@ export default async function Navbar() {
         <div className="flex items-center gap-6 mr-auto">
           <Link
             href="/"
-            className="text-lg font-black tracking-[-0.08em] uppercase hover:text-primary transition-colors shrink-0"
+            className="text-lg font-black tracking-[-0.08em] italic uppercase hover:text-primary transition-colors shrink-0"
           >
             KTXZ
           </Link>
