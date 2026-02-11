@@ -9,7 +9,7 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "KTXZ SHOP | TCG Marketplace",
+  title: "KTXZ | TCG Marketplace",
   description: "The ultimate destination for Pokemon, Magic, and Yu-Gi-Oh!",
 };
 

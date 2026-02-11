@@ -65,7 +65,7 @@ export function generateOrderConfirmationEmail(order: OrderData, siteUrl: string
           <tr>
             <td style="background-color: #000000; padding: 40px; text-align: center; border-bottom: 4px solid #ff0000;">
               <h1 style="margin: 0; color: #ffffff; font-size: 48px; font-weight: 900; letter-spacing: -2px; text-transform: uppercase; font-style: italic;">
-                KTXZ<span style="color: #ff0000;">SHOP</span>
+                KTXZ
               </h1>
               <p style="margin: 12px 0 0 0; color: #cccccc; font-size: 11px; letter-spacing: 4px; text-transform: uppercase; font-weight: 600;">
                 Elite Trading Card Acquisitions
@@ -207,7 +207,7 @@ export function generateOrderConfirmationEmail(order: OrderData, siteUrl: string
               </p>
               <p style="margin: 0 0 20px 0;">
                 <a href="${siteUrl}" style="display: inline-block; background-color: #ff0000; color: #ffffff; text-decoration: none; padding: 16px 40px; font-weight: 900; font-size: 13px; text-transform: uppercase; letter-spacing: 2px; border: 2px solid #ff0000; font-style: italic;">
-                  Visit Shop
+                  Visit KTXZ
                 </a>
               </p>
               <p style="margin: 0; color: #666666; font-size: 10px; text-transform: uppercase; letter-spacing: 3px; font-weight: 700;">
@@ -224,7 +224,7 @@ export function generateOrderConfirmationEmail(order: OrderData, siteUrl: string
   `.trim();
 
   const text = `
-KTXZ SHOP - Order Confirmation
+KTXZ - Order Confirmation
 
 Order Number: #${order.orderNumber}
 Date: ${new Date(order.createdAt).toLocaleString()}

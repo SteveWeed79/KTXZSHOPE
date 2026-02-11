@@ -46,8 +46,7 @@ export default async function Home() {
 
         <div className="relative z-10 space-y-8">
           <h1 className="text-7xl md:text-9xl font-bold tracking-tighter uppercase leading-[0.9]">
-            KTXZ <br />
-            <span className="text-muted-foreground">SHOP</span>
+            KTXZ
           </h1>
 
           <p className="text-muted-foreground font-mono tracking-[0.3em] uppercase text-[10px]">

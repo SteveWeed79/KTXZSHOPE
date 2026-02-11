@@ -20,7 +20,7 @@ export default async function Navbar() {
             href="/"
             className="text-xl font-bold tracking-tighter uppercase hover:text-primary transition-colors"
           >
-            KTXZ <span className="text-primary">SHOP</span>
+            KTXZ
           </Link>
 
           {(session?.user?.email === process.env.ADMIN_EMAIL ||
