@@ -1,17 +1,11 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { requireAdmin } from "@/lib/requireAdmin";
 import dbConnect from "@/lib/dbConnect";
 import Settings from "@/models/Settings";
 
 export async function GET() {
-  const session = await auth();
-  if (
-    !session?.user ||
-    ((session.user as { role?: string })?.role !== "admin" &&
-      session.user.email !== "steveweed1979@gmail.com")
-  ) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const adminResult = await requireAdmin();
+  if (adminResult instanceof NextResponse) return adminResult;
 
   await dbConnect();
   const settings = await Settings.getSettings();
@@ -19,14 +13,8 @@ export async function GET() {
 }
 
 export async function PUT(req: Request) {
-  const session = await auth();
-  if (
-    !session?.user ||
-    ((session.user as { role?: string })?.role !== "admin" &&
-      session.user.email !== "steveweed1979@gmail.com")
-  ) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const adminResult = await requireAdmin();
+  if (adminResult instanceof NextResponse) return adminResult;
 
   await dbConnect();
   const body = await req.json();
