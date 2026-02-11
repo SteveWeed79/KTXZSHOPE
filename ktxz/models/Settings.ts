@@ -39,7 +39,7 @@ SettingsSchema.statics.getSettings = async function () {
 };
 
 const Settings =
-  (models.Settings as ISettingsModel) ||
+  (models.Settings as unknown as ISettingsModel) ||
   model<ISettings, ISettingsModel>("Settings", SettingsSchema);
 
 export default Settings;

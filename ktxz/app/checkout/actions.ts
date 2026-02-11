@@ -71,7 +71,7 @@ export async function createCheckoutSession() {
   await dbConnect();
 
   const session = await auth();
-  const userId = session?.user ? (session.user as any).id : null;
+  const userId = session?.user?.id ?? null;
 
   // Load cart from database or cookie
   const cart = await loadCart(userId);

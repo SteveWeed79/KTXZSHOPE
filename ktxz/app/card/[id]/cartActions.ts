@@ -39,7 +39,7 @@ export async function addToCart(formData: FormData) {
 
   // Get user ID if logged in
   const session = await auth();
-  const userId = session?.user ? (session.user as any).id : null;
+  const userId = session?.user?.id ?? null;
 
   // Get current quantity in cart
   const currentQty = await getCartItemQuantity(userId, cardId);

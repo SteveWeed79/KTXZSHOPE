@@ -48,7 +48,7 @@ export default async function OrdersPage() {
 
   await dbConnect();
 
-  const userId = (session.user as any).id;
+  const userId = session.user?.id;
 
   // Load all orders for this user, sorted by newest first
   const orders = await Order.find({ user: userId })

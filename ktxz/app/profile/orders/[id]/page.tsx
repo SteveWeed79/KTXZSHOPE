@@ -55,7 +55,7 @@ export default async function OrderDetailPage({
   await dbConnect();
 
   const { id } = await params;
-  const userId = (session.user as any).id;
+  const userId = session.user?.id;
 
   // Load order and verify it belongs to this user
   const order = await Order.findOne({

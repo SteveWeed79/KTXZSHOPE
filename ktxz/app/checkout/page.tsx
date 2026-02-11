@@ -11,7 +11,7 @@ export default async function CheckoutPage() {
   await dbConnect();
 
   const session = await auth();
-  const userId = session?.user ? (session.user as { id?: string }).id ?? null : null;
+  const userId = session?.user?.id ?? null;
 
   const cart = await loadCart(userId);
   const items = cart.items ?? [];

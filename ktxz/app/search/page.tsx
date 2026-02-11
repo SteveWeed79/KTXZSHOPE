@@ -13,11 +13,12 @@ type SearchCard = {
 export default async function SearchPage({
   searchParams,
 }: {
-  searchParams: { q?: string };
+  searchParams: Promise<{ q?: string }>;
 }) {
   await dbConnect();
 
-  const q = (searchParams?.q || "").trim();
+  const { q: rawQ } = await searchParams;
+  const q = (rawQ || "").trim();
 
   const results =
     q.length === 0
