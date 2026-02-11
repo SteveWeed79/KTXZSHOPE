@@ -1,6 +1,6 @@
 // ktxz/lib/cartCookie.ts
 import crypto from "crypto";
-import type { RequestCookies } from "next/dist/compiled/@edge-runtime/cookies";
+
 
 export const CART_COOKIE = "ktxz_cart_v1";
 
@@ -166,7 +166,7 @@ function cookieOptions(): CookieWriteOptions {
  * Read + normalize the cart from a Next cookies() store.
  * If missing/invalid, returns a fresh empty cart.
  */
-export function getCartFromCookies(cookieStore: Pick<RequestCookies, "get">): CookieCart {
+export function getCartFromCookies(cookieStore: { get: (...args: any[]) => any }): CookieCart {
   const raw = cookieStore.get(CART_COOKIE)?.value;
   return parseCartCookieValue(raw) ?? newCart();
 }
@@ -175,7 +175,7 @@ export function getCartFromCookies(cookieStore: Pick<RequestCookies, "get">): Co
  * Persist a canonical cart back into the cookie.
  */
 export function saveCartToCookies(
-  cookieStore: Pick<RequestCookies, "set">,
+  cookieStore: { set: (...args: any[]) => any },
   cart: CookieCart
 ): void {
   const payload: CookieCart = {
@@ -195,7 +195,7 @@ export function saveCartToCookies(
 /**
  * Remove the cookie entirely.
  */
-export function clearCartCookie(cookieStore: Pick<RequestCookies, "set">): void {
+export function clearCartCookie(cookieStore: { set: (...args: any[]) => any }): void {
   // Put maxAge into a spread object so TS doesn't treat it as an "excess property"
   // on the object literal passed to the RequestCookie overload.
   const opts = { ...cookieOptions(), maxAge: 0 };
