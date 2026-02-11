@@ -28,11 +28,12 @@ export default async function ShopPage({
     ],
   };
 
+  // Show: non-vault cards OR vault cards whose vault period has ended
+  // Hide: vault cards currently live (shown on homepage) and unreleased vault cards
   const vaultVisibilityFilter: any = {
     $or: [
       { isVault: { $ne: true } },
-      { vaultExpiryDate: { $lt: now } },
-      { vaultReleaseDate: { $gt: now } },
+      { isVault: true, vaultExpiryDate: { $exists: true, $lt: now } },
     ],
   };
 
@@ -56,17 +57,23 @@ export default async function ShopPage({
     _id: brand._id.toString(),
   }));
 
-  const marketplaceCards = rawCards.map((card: any) => ({
-    ...card,
-    _id: card._id.toString(),
-    brand: card.brand ? { ...card.brand, _id: card.brand._id.toString() } : null,
-    createdAt: card.createdAt instanceof Date ? card.createdAt.toISOString() : card.createdAt,
-    updatedAt: card.updatedAt instanceof Date ? card.updatedAt.toISOString() : card.updatedAt,
-    vaultReleaseDate:
-      card.vaultReleaseDate instanceof Date ? card.vaultReleaseDate.toISOString() : card.vaultReleaseDate,
-    vaultExpiryDate:
-      card.vaultExpiryDate instanceof Date ? card.vaultExpiryDate.toISOString() : card.vaultExpiryDate,
-  }));
+  const marketplaceCards = rawCards.map((card: any) => {
+    // Strip vault flags from expired vault cards so they display as normal cards
+    const vaultExpired =
+      card.isVault && card.vaultExpiryDate && new Date(card.vaultExpiryDate) < now;
+
+    return {
+      ...card,
+      _id: card._id.toString(),
+      brand: card.brand ? { ...card.brand, _id: card.brand._id.toString() } : null,
+      createdAt: card.createdAt instanceof Date ? card.createdAt.toISOString() : card.createdAt,
+      updatedAt: card.updatedAt instanceof Date ? card.updatedAt.toISOString() : card.updatedAt,
+      // Clear vault display for expired cards — shoppers just see a normal listing
+      isVault: vaultExpired ? false : card.isVault,
+      vaultReleaseDate: vaultExpired ? null : (card.vaultReleaseDate instanceof Date ? card.vaultReleaseDate.toISOString() : card.vaultReleaseDate),
+      vaultExpiryDate: vaultExpired ? null : (card.vaultExpiryDate instanceof Date ? card.vaultExpiryDate.toISOString() : card.vaultExpiryDate),
+    };
+  });
 
   return (
     <div className="max-w-[1400px] mx-auto px-6">

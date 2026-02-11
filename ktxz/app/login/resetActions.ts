@@ -31,7 +31,7 @@ export async function requestPasswordReset(formData: FormData) {
 
   try {
     await resend.emails.send({
-      from: "KTXZ SHOP <onboarding@resend.dev>",
+      from: "KTXZ <onboarding@resend.dev>",
       to: email,
       subject: "RECOVER YOUR ACCESS | KTXZ",
       html: `

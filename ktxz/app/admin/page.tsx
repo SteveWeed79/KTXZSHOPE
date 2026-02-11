@@ -5,6 +5,7 @@ import {
   updateCard,
   deleteCard,
   updateVaultStatus,
+  removeFromVault,
 } from "./actions";
 import dbConnect from "@/lib/dbConnect";
 import Brand from "@/models/Brand";
@@ -342,6 +343,17 @@ export default async function AdminPage() {
                       </div>
                     </div>
                   </form>
+                  {card.isVault && (
+                    <form action={removeFromVault} className="mt-3 flex justify-end">
+                      <input type="hidden" name="cardId" value={card._id.toString()} />
+                      <button
+                        type="submit"
+                        className="px-4 py-2 text-[10px] font-bold uppercase rounded-lg border border-border text-muted-foreground hover:border-primary hover:text-primary transition-all"
+                      >
+                        Remove from Vault
+                      </button>
+                    </form>
+                  )}
                 </div>
               );
             })}

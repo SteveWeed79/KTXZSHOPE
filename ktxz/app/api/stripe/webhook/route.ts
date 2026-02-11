@@ -27,7 +27,7 @@ export const runtime = "nodejs";
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const EMAIL_FROM = process.env.EMAIL_FROM || "onboarding@resend.dev";
-const EMAIL_FROM_NAME = process.env.EMAIL_FROM_NAME || "KTXZ SHOP";
+const EMAIL_FROM_NAME = process.env.EMAIL_FROM_NAME || "KTXZ";
 const SITE_URL = process.env.NEXTAUTH_URL || process.env.SITE_URL || "http://localhost:3000";
 
 function mustGetEnv(name: string) {

@@ -46,8 +46,7 @@ export default async function Home() {
 
         <div className="relative z-10 space-y-8">
           <h1 className="text-7xl md:text-9xl font-bold tracking-tighter uppercase leading-[0.9]">
-            KTXZ <br />
-            <span className="text-muted-foreground">SHOP</span>
+            KTXZ
           </h1>
 
           <p className="text-muted-foreground font-mono tracking-[0.3em] uppercase text-[10px]">
@@ -70,23 +69,21 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Vault Section */}
+      {/* Featured Section */}
       {vaultCards.length > 0 && (
-        <section className="w-screen border-t border-border py-24 mt-12 relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] bg-card">
-          <div className="relative z-10 max-w-6xl mx-auto px-6">
-            <div className="flex flex-col items-center mb-16">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-border bg-muted/50 text-[10px] font-bold uppercase tracking-widest mb-4">
+        <section className="w-full border-t border-border py-16 mt-12">
+          <div className="max-w-6xl mx-auto px-6">
+            <div className="flex flex-col items-center mb-12">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/30 bg-primary/5 text-[10px] font-bold uppercase tracking-widest mb-4">
                 <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-                The Vault
+                Featured
               </div>
-              <p className="text-sm text-muted-foreground">Limited drops, available for a limited time.</p>
+              <p className="text-sm text-muted-foreground">Limited drops, available for a limited time</p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {vaultCards.map((card: any) => (
-                <div key={card._id.toString()} className="w-full aspect-[2.5/3.5]">
-                  <ProductCard card={card} />
-                </div>
+                <ProductCard key={card._id.toString()} card={card} />
               ))}
             </div>
           </div>
