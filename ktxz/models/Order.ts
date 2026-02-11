@@ -116,6 +116,14 @@ const OrderSchema = new Schema(
     fulfilledAt: { type: Date },
     cancelledAt: { type: Date },
     refundedAt: { type: Date },
+
+    // Email delivery tracking
+    emailStatus: {
+      type: String,
+      enum: ["pending", "sent", "failed"],
+      default: "pending",
+    },
+    emailError: { type: String, default: "" },
   },
   { timestamps: true }
 );
@@ -123,6 +131,8 @@ const OrderSchema = new Schema(
 // Helpful indexes
 OrderSchema.index({ createdAt: -1 });
 OrderSchema.index({ email: 1, createdAt: -1 });
+OrderSchema.index({ user: 1, createdAt: -1 });
+OrderSchema.index({ emailStatus: 1 });
 
 // Auto-generate orderNumber before save if not set
 OrderSchema.pre("save", async function () {

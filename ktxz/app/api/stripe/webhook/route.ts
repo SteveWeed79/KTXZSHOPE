@@ -80,34 +80,31 @@ async function claimStripeEventOnce(eventId: string) {
 
 async function markCardsSoldOrDecrementStock(items: Array<{ cardId: string; qty: number }>) {
   for (const it of items) {
-    const card = await Card.findById(it.cardId);
-    if (!card) continue;
-
-    const inventoryType = ((card as any).inventoryType || "single") as "single" | "bulk";
     const qty = Math.max(1, Number(it.qty || 1));
 
-    if (inventoryType === "bulk") {
-      const currentStock = typeof (card as any).stock === "number" ? (card as any).stock : 0;
-      const nextStock = Math.max(0, currentStock - qty);
-      (card as any).stock = nextStock;
+    // Attempt atomic decrement for bulk items first
+    const bulkResult = await Card.findOneAndUpdate(
+      { _id: it.cardId, inventoryType: "bulk", stock: { $gte: qty } },
+      { $inc: { stock: -qty } },
+      { new: true }
+    );
 
-      if (nextStock === 0) {
-        (card as any).status = "sold";
-        (card as any).isActive = false;
-      } else {
-        (card as any).status = (card as any).status || "active";
-        (card as any).isActive = (card as any).isActive ?? true;
+    if (bulkResult) {
+      // If stock hit zero, mark as sold
+      if ((bulkResult as any).stock <= 0) {
+        await Card.updateOne(
+          { _id: it.cardId },
+          { $set: { status: "sold", isActive: false } }
+        );
       }
-
-      await card.save();
       continue;
     }
 
-    // single
-    (card as any).status = "sold";
-    (card as any).isActive = false;
-    if (typeof (card as any).stock === "number") (card as any).stock = 0;
-    await card.save();
+    // Single item or bulk that didn't match — mark as sold atomically
+    await Card.findOneAndUpdate(
+      { _id: it.cardId },
+      { $set: { status: "sold", isActive: false, stock: 0 } }
+    );
   }
 }
 
@@ -353,15 +350,25 @@ export async function POST(req: Request) {
     }
 
     // Send confirmation email automatically if paid
+    let emailSent = false;
     if (paid) {
-      await sendOrderConfirmationEmail(order.toObject());
+      emailSent = await sendOrderConfirmationEmail(order.toObject());
+      await Order.updateOne(
+        { _id: order._id },
+        {
+          $set: {
+            emailStatus: emailSent ? "sent" : "failed",
+            emailError: emailSent ? "" : "Email delivery failed — check logs",
+          },
+        }
+      );
     }
 
-    return NextResponse.json({ 
-      received: true, 
-      orderId: order._id.toString(), 
+    return NextResponse.json({
+      received: true,
+      orderId: order._id.toString(),
       paid,
-      emailSent: paid 
+      emailSent,
     });
   } catch (err: any) {
     console.error("Webhook error:", err);
