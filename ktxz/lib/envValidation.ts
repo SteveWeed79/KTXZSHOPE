@@ -18,3 +18,10 @@ export function validateEnv() {
     );
   }
 }
+
+/** Get an environment variable or throw if missing. */
+export function mustGetEnv(name: string): string {
+  const v = process.env[name];
+  if (!v) throw new Error(`Missing ${name} env var.`);
+  return v;
+}

@@ -14,6 +14,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import dbConnect from "@/lib/dbConnect";
 import Order from "@/models/Order";
+import { errorResponse } from "@/lib/apiResponse";
 
 export async function POST(req: NextRequest) {
   try {
@@ -90,7 +91,6 @@ export async function POST(req: NextRequest) {
       message: `${emailType} email sent successfully (PLACEHOLDER - integrate email service)`,
     });
   } catch (error) {
-    console.error("Error sending email:", error);
-    return NextResponse.json({ error: "Failed to send email" }, { status: 500 });
+    return errorResponse(error);
   }
 }

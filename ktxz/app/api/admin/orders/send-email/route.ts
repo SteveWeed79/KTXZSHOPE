@@ -9,18 +9,13 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { Resend } from "resend";
 import { requireAdmin } from "@/lib/requireAdmin";
 import dbConnect from "@/lib/dbConnect";
 import Order from "@/models/Order";
 import { generateOrderConfirmationEmail } from "@/lib/emails/orderConfirmation";
 import { generateShippingNotificationEmail } from "@/lib/emails/shippingNotification";
-
-const resend = new Resend(process.env.RESEND_API_KEY);
-
-const EMAIL_FROM = process.env.EMAIL_FROM || "onboarding@resend.dev";
-const EMAIL_FROM_NAME = process.env.EMAIL_FROM_NAME || "KTXZ";
-const SITE_URL = process.env.NEXTAUTH_URL || process.env.SITE_URL || "http://localhost:3000";
+import { errorResponse } from "@/lib/apiResponse";
+import { getResend, EMAIL_FROM, EMAIL_FROM_NAME, SITE_URL } from "@/lib/emailConfig";
 
 export async function POST(req: NextRequest) {
   try {
@@ -86,7 +81,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Send email via Resend
-    const emailResult = await resend.emails.send({
+    const emailResult = await getResend().emails.send({
       from: `${EMAIL_FROM_NAME} <${EMAIL_FROM}>`,
       to: orderObj.email as string,
       subject: emailSubject,
@@ -98,7 +93,7 @@ export async function POST(req: NextRequest) {
     if (!emailResult.data) {
       console.error("Resend error:", emailResult.error);
       return NextResponse.json(
-        { error: "Failed to send email", details: emailResult.error },
+        { error: "Failed to send email", code: "EMAIL_SEND_FAILED" },
         { status: 500 }
       );
     }
@@ -110,11 +105,7 @@ export async function POST(req: NextRequest) {
       message: `${emailType} email sent successfully`,
       emailId: emailResult.data.id,
     });
-  } catch (error: unknown) {
-    console.error("Error sending email:", error);
-    return NextResponse.json(
-      { error: "Failed to send email", details: error instanceof Error ? error.message : "Unknown error" },
-      { status: 500 }
-    );
+  } catch (error) {
+    return errorResponse(error);
   }
 }

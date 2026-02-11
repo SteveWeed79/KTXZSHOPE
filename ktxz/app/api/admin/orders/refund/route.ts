@@ -13,30 +13,9 @@ import Stripe from "stripe";
 import { requireAdmin } from "@/lib/requireAdmin";
 import dbConnect from "@/lib/dbConnect";
 import Order from "@/models/Order";
-import Card from "@/models/Card";
-
-async function restoreInventory(orderItems: Array<{ card: string; quantity: number }>) {
-  for (const item of orderItems) {
-    const card = await Card.findById(item.card);
-    if (!card) continue;
-
-    const inventoryType = card.inventoryType || "single";
-
-    if (inventoryType === "bulk") {
-      card.stock = (card.stock || 0) + item.quantity;
-      if (card.status === "sold") {
-        card.status = "active";
-        card.isActive = true;
-      }
-    } else {
-      card.stock = 1;
-      card.status = "active";
-      card.isActive = true;
-    }
-
-    await card.save();
-  }
-}
+import { errorResponse } from "@/lib/apiResponse";
+import { mustGetStripe, toCents } from "@/lib/stripe";
+import { restoreInventory } from "@/lib/inventory";
 
 export async function POST(req: NextRequest) {
   try {
@@ -72,15 +51,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Initialize Stripe
-    const stripeSecret = process.env.STRIPE_SECRET_KEY;
-    if (!stripeSecret) {
-      return NextResponse.json({ error: "Stripe is not configured" }, { status: 500 });
-    }
-
-    const stripe = new Stripe(stripeSecret, {
-      apiVersion: "2026-01-28.clover",
-    });
+    const stripe = mustGetStripe();
 
     // Build refund params
     const refundParams: Stripe.RefundCreateParams = {
@@ -89,8 +60,8 @@ export async function POST(req: NextRequest) {
 
     // Partial refund: amount in dollars, convert to cents
     if (amount && typeof amount === "number" && amount > 0) {
-      const amountCents = Math.round(amount * 100);
-      const totalCents = Math.round((order.amounts?.total || 0) * 100);
+      const amountCents = toCents(amount);
+      const totalCents = toCents(order.amounts?.total || 0);
 
       if (amountCents > totalCents) {
         return NextResponse.json(
@@ -117,7 +88,7 @@ export async function POST(req: NextRequest) {
     const refund = await stripe.refunds.create(refundParams);
 
     // Determine if full or partial refund
-    const isFullRefund = !amount || Math.round(amount * 100) >= Math.round((order.amounts?.total || 0) * 100);
+    const isFullRefund = !amount || toCents(amount) >= toCents(order.amounts?.total || 0);
 
     // Update order
     order.status = "refunded";
@@ -146,19 +117,12 @@ export async function POST(req: NextRequest) {
       inventoryRestored,
     });
   } catch (error) {
-    console.error("Error processing refund:", error);
-
-    // Handle Stripe-specific errors
     if (error instanceof Stripe.errors.StripeError) {
       return NextResponse.json(
-        { error: `Stripe error: ${error.message}` },
+        { error: `Stripe error: ${error.message}`, code: "STRIPE_ERROR" },
         { status: 400 }
       );
     }
-
-    return NextResponse.json(
-      { error: "Failed to process refund" },
-      { status: 500 }
-    );
+    return errorResponse(error);
   }
 }

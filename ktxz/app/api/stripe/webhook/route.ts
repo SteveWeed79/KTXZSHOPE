@@ -12,7 +12,6 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { Resend } from "resend";
 import dbConnect from "@/lib/dbConnect";
 import mongoose from "mongoose";
 import type { Collection } from "mongodb";
@@ -21,25 +20,11 @@ import Order from "@/models/Order";
 import User from "@/models/User";
 import Reservation from "@/models/Reservation";
 import { generateOrderConfirmationEmail } from "@/lib/emails/orderConfirmation";
+import { mustGetStripe, fromCents } from "@/lib/stripe";
+import { mustGetEnv } from "@/lib/envValidation";
+import { getResend, EMAIL_FROM, EMAIL_FROM_NAME, SITE_URL } from "@/lib/emailConfig";
 
 export const runtime = "nodejs";
-
-const resend = new Resend(process.env.RESEND_API_KEY);
-
-const EMAIL_FROM = process.env.EMAIL_FROM || "onboarding@resend.dev";
-const EMAIL_FROM_NAME = process.env.EMAIL_FROM_NAME || "KTXZ";
-const SITE_URL = process.env.NEXTAUTH_URL || process.env.SITE_URL || "http://localhost:3000";
-
-function mustGetEnv(name: string) {
-  const v = process.env[name];
-  if (!v) throw new Error(`Missing ${name} env var.`);
-  return v;
-}
-
-function centsToDollars(cents: number | null | undefined) {
-  const n = typeof cents === "number" ? cents : 0;
-  return Math.round(n) / 100;
-}
 
 function normalizeStripeAddress(a: Stripe.Address | null | undefined) {
   return {
@@ -78,36 +63,42 @@ async function claimStripeEventOnce(eventId: string) {
   return { alreadyClaimed: !inserted };
 }
 
+/**
+ * Release a claimed event so Stripe can retry delivery.
+ * Called when we claimed the event but then failed to process it.
+ */
+async function unclaimStripeEvent(eventId: string) {
+  const col = mongoose.connection.collection("stripe_events") as Collection<StripeEventDoc>;
+  await col.deleteOne({ _id: eventId });
+}
+
 async function markCardsSoldOrDecrementStock(items: Array<{ cardId: string; qty: number }>) {
   for (const it of items) {
-    const card = await Card.findById(it.cardId);
-    if (!card) continue;
-
-    const inventoryType = ((card as any).inventoryType || "single") as "single" | "bulk";
     const qty = Math.max(1, Number(it.qty || 1));
 
-    if (inventoryType === "bulk") {
-      const currentStock = typeof (card as any).stock === "number" ? (card as any).stock : 0;
-      const nextStock = Math.max(0, currentStock - qty);
-      (card as any).stock = nextStock;
+    // Attempt atomic decrement for bulk items first
+    const bulkResult = await Card.findOneAndUpdate(
+      { _id: it.cardId, inventoryType: "bulk", stock: { $gte: qty } },
+      { $inc: { stock: -qty } },
+      { new: true }
+    );
 
-      if (nextStock === 0) {
-        (card as any).status = "sold";
-        (card as any).isActive = false;
-      } else {
-        (card as any).status = (card as any).status || "active";
-        (card as any).isActive = (card as any).isActive ?? true;
+    if (bulkResult) {
+      // If stock hit zero, mark as sold
+      if ((bulkResult as any).stock <= 0) {
+        await Card.updateOne(
+          { _id: it.cardId },
+          { $set: { status: "sold", isActive: false } }
+        );
       }
-
-      await card.save();
       continue;
     }
 
-    // single
-    (card as any).status = "sold";
-    (card as any).isActive = false;
-    if (typeof (card as any).stock === "number") (card as any).stock = 0;
-    await card.save();
+    // Single item or bulk that didn't match — mark as sold atomically
+    await Card.findOneAndUpdate(
+      { _id: it.cardId },
+      { $set: { status: "sold", isActive: false, stock: 0 } }
+    );
   }
 }
 
@@ -123,7 +114,7 @@ async function sendOrderConfirmationEmail(order: any) {
       SITE_URL
     );
 
-    const result = await resend.emails.send({
+    const result = await getResend().emails.send({
       from: `${EMAIL_FROM_NAME} <${EMAIL_FROM}>`,
       to: order.email,
       subject: `Order Confirmation #${orderNumber} - KTXZ`,
@@ -146,12 +137,8 @@ async function sendOrderConfirmationEmail(order: any) {
 
 export async function POST(req: Request) {
   try {
-    const stripeSecret = mustGetEnv("STRIPE_SECRET_KEY");
     const webhookSecret = mustGetEnv("STRIPE_WEBHOOK_SECRET");
-
-    const stripe = new Stripe(stripeSecret, {
-      apiVersion: "2026-01-28.clover",
-    });
+    const stripe = mustGetStripe();
 
     const sig = req.headers.get("stripe-signature");
     if (!sig) {
@@ -259,7 +246,7 @@ export async function POST(req: Request) {
             ? Math.round(((li as any).amount_total as number) / Math.max(1, qty))
             : 0;
 
-      const unitPrice = centsToDollars(unitAmountCents);
+      const unitPrice = fromCents(unitAmountCents);
 
       if (cardId) {
         purchased.push({
@@ -301,45 +288,62 @@ export async function POST(req: Request) {
     };
 
     // Amounts in dollars
-    const subtotal = centsToDollars(session.amount_subtotal);
-    const total = centsToDollars(session.amount_total);
-    const tax = centsToDollars(session.total_details?.amount_tax ?? 0);
-    const shipping = centsToDollars(session.total_details?.amount_shipping ?? 0);
+    const subtotal = fromCents(session.amount_subtotal);
+    const total = fromCents(session.amount_total);
+    const tax = fromCents(session.total_details?.amount_tax ?? 0);
+    const shipping = fromCents(session.total_details?.amount_shipping ?? 0);
 
-    // Create order
-    const order = await Order.create({
-      user: user?._id,
-      email,
-      items: purchased.map((p) => ({
-        card: new mongoose.Types.ObjectId(p.cardId),
-        name: p.name,
-        image: p.image,
-        brandName: p.brandName,
-        rarity: p.rarity,
-        unitPrice: p.unitPrice,
-        quantity: p.qty,
-      })),
-      amounts: { subtotal, tax, shipping, total },
-      currency: (session.currency || "usd").toLowerCase(),
+    // --- FULFILLMENT WITH ERROR RECOVERY ---
+    // Order of operations: create order → consume reservation → decrement stock → email
+    // If order creation fails, unclaim the event so Stripe retries.
+    // If stock decrement fails, flag the order for manual review.
 
-      stripeCheckoutSessionId: sessionId,
-      stripePaymentIntentId: paymentIntentId || undefined,
-      stripeCustomerId: customerId || undefined,
+    let order: any;
+    try {
+      order = await Order.create({
+        user: user?._id,
+        email,
+        items: purchased.map((p) => ({
+          card: new mongoose.Types.ObjectId(p.cardId),
+          name: p.name,
+          image: p.image,
+          brandName: p.brandName,
+          rarity: p.rarity,
+          unitPrice: p.unitPrice,
+          quantity: p.qty,
+        })),
+        amounts: { subtotal, tax, shipping, total },
+        currency: (session.currency || "usd").toLowerCase(),
 
-      shippingAddress,
-      billingAddress,
+        stripeCheckoutSessionId: sessionId,
+        stripePaymentIntentId: paymentIntentId || undefined,
+        stripeCustomerId: customerId || undefined,
 
-      status: paid ? "paid" : "pending",
-      paidAt: paid ? new Date() : undefined,
+        shippingAddress,
+        billingAddress,
 
-      trackingNumber: "",
-      carrier: "",
-      notes: paid
-        ? "Paid via Stripe. Awaiting fulfillment."
-        : "Checkout completed but not marked paid yet.",
-    });
+        status: paid ? "paid" : "pending",
+        paidAt: paid ? new Date() : undefined,
 
-    // Mark reservation as consumed and update inventory
+        trackingNumber: "",
+        carrier: "",
+        notes: paid
+          ? "Paid via Stripe. Awaiting fulfillment."
+          : "Checkout completed but not marked paid yet.",
+      });
+    } catch (orderErr: any) {
+      // Order creation failed — unclaim event so Stripe will retry
+      console.error("Order creation failed, unclaiming event for retry:", orderErr);
+      await unclaimStripeEvent(event.id);
+      return NextResponse.json(
+        { error: "Order creation failed — will retry" },
+        { status: 500 }
+      );
+    }
+
+    // Consume reservation + update inventory
+    const stockItems = purchased.map((p) => ({ cardId: p.cardId, qty: p.qty }));
+
     if (paid) {
       const reservationId = session.metadata?.reservationId;
       if (reservationId) {
@@ -349,19 +353,45 @@ export async function POST(req: Request) {
         );
       }
 
-      await markCardsSoldOrDecrementStock(purchased.map((p) => ({ cardId: p.cardId, qty: p.qty })));
+      try {
+        await markCardsSoldOrDecrementStock(stockItems);
+      } catch (stockErr: any) {
+        // Stock update failed — order exists but inventory not updated
+        // Flag for manual review rather than crashing (payment already succeeded)
+        console.error("Stock decrement failed after order creation:", stockErr);
+        await Order.updateOne(
+          { _id: order._id },
+          {
+            $set: {
+              notes: "NEEDS REVIEW: Stock decrement failed after payment. " +
+                     `Error: ${stockErr?.message || "unknown"}. ` +
+                     "Verify inventory manually.",
+            },
+          }
+        );
+      }
     }
 
-    // Send confirmation email automatically if paid
+    // Send confirmation email (non-critical — never block the webhook response)
+    let emailSent = false;
     if (paid) {
-      await sendOrderConfirmationEmail(order.toObject());
+      emailSent = await sendOrderConfirmationEmail(order.toObject());
+      await Order.updateOne(
+        { _id: order._id },
+        {
+          $set: {
+            emailStatus: emailSent ? "sent" : "failed",
+            emailError: emailSent ? "" : "Email delivery failed — check logs",
+          },
+        }
+      );
     }
 
-    return NextResponse.json({ 
-      received: true, 
-      orderId: order._id.toString(), 
+    return NextResponse.json({
+      received: true,
+      orderId: order._id.toString(),
       paid,
-      emailSent: paid 
+      emailSent,
     });
   } catch (err: any) {
     console.error("Webhook error:", err);
