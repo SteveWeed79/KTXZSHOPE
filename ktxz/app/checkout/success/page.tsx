@@ -71,7 +71,7 @@ export default async function CheckoutSuccessPage({
   if (paid) {
     // Clear cart (handles both database and cookie)
     const userSession = await auth();
-    const userId = userSession?.user ? (userSession.user as any).id : null;
+    const userId = userSession?.user?.id ?? null;
     await clearCart(userId);
   }
 

@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
-    if (emailType === "shipping" && !(order as Record<string, unknown>).trackingNumber) {
+    if (emailType === "shipping" && !(order as any).trackingNumber) {
       return NextResponse.json(
         { error: "Cannot send shipping email without tracking number" },
         { status: 400 }
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
     }
 
     // TODO: Integrate with email service (Resend, SendGrid, etc.)
-    console.log(`Sending ${emailType} email to:`, (order as Record<string, unknown>).email);
+    console.log(`Sending ${emailType} email to:`, (order as any).email);
     console.log("Order data:", order);
 
     // Example Resend integration:
