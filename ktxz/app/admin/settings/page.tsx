@@ -148,7 +148,7 @@ export default function AdminSettingsPage() {
           </div>
         </section>
 
-        {/* Vault & Maintenance */}
+        {/* Featured & Maintenance */}
         <section className="bg-card border border-border rounded-2xl p-6 space-y-6">
           <h2 className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2">
             <Zap className="h-4 w-4" /> Store Controls
@@ -164,9 +164,9 @@ export default function AdminSettingsPage() {
                 className="rounded accent-primary"
               />
               <div>
-                <span className="text-sm font-medium">Vault Live</span>
+                <span className="text-sm font-medium">Featured Live</span>
                 <p className="text-xs text-muted-foreground">
-                  Enable the vault section on the homepage
+                  Enable the featured section on the homepage
                 </p>
               </div>
             </label>
