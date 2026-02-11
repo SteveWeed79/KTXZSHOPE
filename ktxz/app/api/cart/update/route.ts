@@ -9,6 +9,7 @@
  */
 
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import dbConnect from "@/lib/dbConnect";
 import Card from "@/models/Card";
 import { auth } from "@/auth";
@@ -44,8 +45,13 @@ export async function POST(req: Request) {
     const qtyRaw = form.get("qty") ?? form.get("quantity");
     const requestedQty = toPositiveInt(qtyRaw, 1);
 
-    if (!cardId) {
+    if (!cardId || !mongoose.Types.ObjectId.isValid(cardId)) {
       return redirectToCart(req, "error=missing-cardId");
+    }
+
+    // Cap quantity at 99 to prevent abuse
+    if (requestedQty > 99) {
+      return redirectToCart(req, "error=invalid-quantity");
     }
 
     await dbConnect();

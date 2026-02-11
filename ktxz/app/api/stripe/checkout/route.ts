@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
+import mongoose from "mongoose";
 import dbConnect from "@/lib/dbConnect";
 import Card from "@/models/Card";
 import { auth } from "@/auth";
@@ -58,11 +59,11 @@ export async function POST(req: Request) {
 
     for (const item of body.items) {
       const cardId = (item.cardId || "").trim();
-      const qty = Math.max(1, Number(item.quantity || 1));
+      const qty = Math.min(99, Math.max(1, Number(item.quantity || 1)));
 
-      if (!cardId) {
+      if (!cardId || !mongoose.Types.ObjectId.isValid(cardId)) {
         return NextResponse.json(
-          { error: "Invalid cart item (missing cardId)." },
+          { error: "Invalid cart item (missing or malformed cardId)." },
           { status: 400 }
         );
       }
