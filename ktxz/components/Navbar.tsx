@@ -23,7 +23,7 @@ export default async function Navbar() {
             KTXZ <span className="text-primary">SHOP</span>
           </Link>
 
-          {(session?.user?.email === "steveweed1979@gmail.com" ||
+          {(session?.user?.email === process.env.ADMIN_EMAIL ||
             (session?.user as { role?: string })?.role === "admin") && (
             <Link
               href="/admin"
