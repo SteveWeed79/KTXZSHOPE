@@ -65,8 +65,8 @@ export default async function ProfilePage() {
             </div>
             <div>
               <label className="block text-xs text-muted-foreground uppercase mb-1">Status</label>
-              <p className="text-sm font-medium text-green-600 dark:text-green-400 flex items-center gap-2">
-                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+              <p className="text-sm font-medium text-primary flex items-center gap-2">
+                <span className="w-2 h-2 bg-primary rounded-full animate-pulse" />
                 Active
               </p>
             </div>

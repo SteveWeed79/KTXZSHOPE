@@ -85,10 +85,10 @@ export default function AdminSettingsPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto py-8 space-y-8">
+    <div className="max-w-4xl mx-auto section-spacing space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Site Settings</h1>
+          <h1 className="text-3xl brand-heading">Site Settings</h1>
           <p className="text-muted-foreground text-sm mt-1">
             Global configuration for your store
           </p>
@@ -106,7 +106,7 @@ export default function AdminSettingsPage() {
           className={`p-3 rounded-lg text-sm ${
             message.includes("Error")
               ? "bg-primary/10 text-primary border border-primary/20"
-              : "bg-green-500/10 text-green-700 dark:text-green-400 border border-green-500/20"
+              : "bg-primary/10 text-primary dark:text-primary border border-primary/20"
           }`}
         >
           {message}
@@ -246,7 +246,7 @@ export default function AdminSettingsPage() {
       <button
         onClick={handleSave}
         disabled={saving}
-        className="w-full bg-primary text-primary-foreground py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:brightness-90 transition-all disabled:opacity-50"
+        className="w-full btn-primary flex items-center justify-center gap-2 disabled:opacity-50"
       >
         <Save className="h-4 w-4" />
         {saving ? "Saving..." : "Save All Settings"}

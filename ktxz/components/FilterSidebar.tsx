@@ -25,7 +25,7 @@ export default function FilterSidebar({ brands }: { brands: Brand[] }) {
   };
 
   return (
-    <div className="space-y-8 bg-card p-6 rounded-2xl border border-border">
+    <div className="space-y-8 bg-card p-6 rounded-card elevation-card">
       <div>
         <h3 className="text-foreground font-bold uppercase text-xs tracking-[0.15em] mb-4">
           Categories

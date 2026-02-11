@@ -36,7 +36,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ card }) => {
         </div>
       )}
 
-      <div className="relative w-full aspect-[2.5/3.5] overflow-hidden rounded-xl bg-muted border border-border group-hover:border-primary transition-all duration-300">
+      <div className="relative w-full aspect-[2.5/3.5] overflow-hidden rounded-medium-soft bg-muted border-2 border-transparent group-hover:border-primary transition-all duration-300 elevation-card">
         <img
           src={card.image || "/placeholder-card.png"}
           alt={card.name}
@@ -49,13 +49,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ card }) => {
       </div>
 
       <div className="mt-4 text-left">
-        <h3 className="text-foreground font-bold text-base uppercase leading-tight group-hover:text-primary transition-colors tracking-tight">
+        <h3 className="text-foreground font-black text-base uppercase leading-tight group-hover:text-primary transition-colors tracking-widest">
           {card.name}
         </h3>
         <p className="text-muted-foreground text-[10px] font-mono uppercase mt-1 tracking-widest">
           {card.rarity} / {card.brand?.name}
         </p>
-        <p className="text-foreground font-bold text-lg mt-1">${card.price.toFixed(2)}</p>
+        <p className="text-lg mt-1 brand-price">${card.price.toFixed(2)}</p>
       </div>
     </Link>
   );
