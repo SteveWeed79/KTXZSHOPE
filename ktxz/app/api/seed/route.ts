@@ -2,8 +2,17 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Card from "@/models/Card";
 import Brand from "@/models/Brand";
+import { requireAdmin } from "@/lib/requireAdmin";
 
 export async function GET() {
+  // Block in production — seed is for development only
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json({ error: "Seed disabled in production" }, { status: 403 });
+  }
+
+  const adminResult = await requireAdmin();
+  if (adminResult instanceof NextResponse) return adminResult;
+
   try {
     await dbConnect();
 

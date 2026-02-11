@@ -9,6 +9,7 @@
  */
 
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import { auth } from "@/auth";
 import { removeFromCart } from "@/lib/cartHelpers";
 import { RateLimiters, rateLimitResponse } from "@/lib/rateLimit";
@@ -46,7 +47,7 @@ export async function POST(req: Request) {
   const form = await req.formData();
   const cardId = String(form.get("cardId") || "").trim();
 
-  if (!cardId) {
+  if (!cardId || !mongoose.Types.ObjectId.isValid(cardId)) {
     return redirectBack(req);
   }
 
