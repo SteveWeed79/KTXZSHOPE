@@ -1,4 +1,19 @@
-import mongoose, { Schema, model, models } from "mongoose";
+import mongoose, { Schema, model, models, Model } from "mongoose";
+
+interface ISettings {
+  _id: string;
+  storeName: string;
+  supportEmail: string;
+  returnPolicy: string;
+  termsOfService: string;
+  isVaultLive: boolean;
+  dropCountdown?: Date;
+  maintenanceMode: boolean;
+}
+
+interface ISettingsModel extends Model<ISettings> {
+  getSettings(): Promise<ISettings>;
+}
 
 const SettingsSchema = new Schema(
   {
@@ -24,6 +39,7 @@ SettingsSchema.statics.getSettings = async function () {
 };
 
 const Settings =
-  (models.Settings as mongoose.Model<any>) || model("Settings", SettingsSchema);
+  (models.Settings as ISettingsModel) ||
+  model<ISettings, ISettingsModel>("Settings", SettingsSchema);
 
 export default Settings;
