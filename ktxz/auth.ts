@@ -61,7 +61,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // IMPORTANT: Merge cookie cart into user cart on login
         // This happens once per login session
         try {
-          await mergeCookieCartIntoUserCart(user.id);
+          if (user.id) {
+            await mergeCookieCartIntoUserCart(user.id);
+          }
         } catch (err) {
           console.error("Cart merge error on login:", err);
           // Don't block login if cart merge fails
