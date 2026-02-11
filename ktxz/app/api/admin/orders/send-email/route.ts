@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
 
     // Validate tracking number for shipping emails
     if (emailType === "shipping") {
-      if (!(order as Record<string, unknown>).trackingNumber) {
+      if (!(order as any).trackingNumber) {
         return NextResponse.json(
           { error: "Cannot send shipping email without tracking number" },
           { status: 400 }
@@ -73,11 +73,9 @@ export async function POST(req: NextRequest) {
     let emailSubject = "";
     let emailContent = { html: "", text: "" };
 
-    const orderNumber = (order as Record<string, unknown>).orderNumber || orderId;
-    const orderData = {
-      ...order,
-      orderNumber,
-    } as Record<string, unknown>;
+    const orderObj = order as any;
+    const orderNumber = orderObj.orderNumber || orderId;
+    const orderData = { ...orderObj, orderNumber };
 
     if (emailType === "confirmation") {
       emailSubject = `Order Confirmation #${orderNumber} - KTXZ`;
@@ -90,7 +88,7 @@ export async function POST(req: NextRequest) {
     // Send email via Resend
     const emailResult = await resend.emails.send({
       from: `${EMAIL_FROM_NAME} <${EMAIL_FROM}>`,
-      to: (order as Record<string, unknown>).email as string,
+      to: orderObj.email as string,
       subject: emailSubject,
       html: emailContent.html,
       text: emailContent.text,
