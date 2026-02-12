@@ -97,7 +97,7 @@ export default async function ShopPage({
 
   return (
     <div className="max-w-[1400px] mx-auto px-6">
-      <div className="flex flex-col md:flex-row gap-8 py-12">
+      <div className="flex flex-col md:flex-row grid-spacing section-spacing">
         <aside className="w-full md:w-64 shrink-0">
           <FilterSidebar brands={brands} />
         </aside>

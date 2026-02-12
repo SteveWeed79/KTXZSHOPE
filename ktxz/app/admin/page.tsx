@@ -14,7 +14,7 @@ import Order from "@/models/Order";
 import AdminSection from "@/components/AdminSection";
 import VaultAutoRefresh from "@/components/VaultAutoRefresh";
 import Link from "next/link";
-import { Package, Clock, CheckCircle, Settings } from "lucide-react";
+import { Package, Clock, CheckCircle } from "lucide-react";
 
 type IdLike = { toString(): string };
 
@@ -81,21 +81,13 @@ export default async function AdminPage() {
       <VaultAutoRefresh events={vaultEvents} />
 
       <div className="max-w-5xl mx-auto space-y-6">
-        <header className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl brand-heading">
-              Admin Dashboard
-            </h1>
-            <p className="text-muted-foreground text-sm mt-1">
-              Inventory, orders & site management
-            </p>
-          </div>
-          <Link
-            href="/admin/settings"
-            className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-          >
-            <Settings className="h-5 w-5" />
-          </Link>
+        <header className="mb-8">
+          <h1 className="text-3xl brand-heading">
+            Dashboard
+          </h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            Inventory, orders & site management
+          </p>
         </header>
 
         {/* Order Management Section */}

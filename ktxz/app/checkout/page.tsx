@@ -44,7 +44,7 @@ export default async function CheckoutPage() {
   const subtotal = rows.reduce((sum, r) => sum + Number(r.card.price || 0) * r.qty, 0);
 
   return (
-    <main className="min-h-[80vh] py-12 max-w-6xl mx-auto">
+    <main className="min-h-[80vh] section-spacing max-w-6xl mx-auto">
       <div className="flex items-end justify-between gap-6 mb-10">
         <div>
           <h1 className="text-4xl font-bold uppercase tracking-tighter">Checkout</h1>
@@ -57,7 +57,7 @@ export default async function CheckoutPage() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 grid-spacing">
         <section className="lg:col-span-7 space-y-4">
           <div className="border border-border bg-card rounded-2xl p-6">
             <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-6">

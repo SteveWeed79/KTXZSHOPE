@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
-import { Save, ArrowLeft, Globe, Shield, Zap } from "lucide-react";
+import { Save, Globe, Shield, Zap } from "lucide-react";
 
 interface SiteSettings {
   storeName: string;
@@ -86,19 +85,11 @@ export default function AdminSettingsPage() {
 
   return (
     <div className="max-w-4xl mx-auto section-spacing space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl brand-heading">Site Settings</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Global configuration for your store
-          </p>
-        </div>
-        <Link
-          href="/admin"
-          className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-2 transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" /> Back to Admin
-        </Link>
+      <div>
+        <h1 className="text-3xl brand-heading">Site Settings</h1>
+        <p className="text-muted-foreground text-sm mt-1">
+          Global configuration for your store
+        </p>
       </div>
 
       {message && (

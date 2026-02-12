@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, use } from "react";
 import Link from "next/link";
 import { StatusStepper } from "@/components/StatusStepper";
-import { ArrowLeft, Printer, Mail, Package, Send } from "lucide-react";
+import { Printer, Mail, Package, Send } from "lucide-react";
 
 interface Order {
   _id: string;
@@ -184,14 +184,9 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               Placed on {new Date(order.createdAt).toLocaleString()}
             </p>
           </div>
-          <div className="flex gap-3">
-            <button onClick={() => window.print()} className="btn-outline flex items-center gap-2 text-xs">
-              <Printer className="h-4 w-4" /> Print
-            </button>
-            <Link href="/admin/orders" className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-2 transition-colors">
-              <ArrowLeft className="h-4 w-4" /> Back
-            </Link>
-          </div>
+          <button onClick={() => window.print()} className="btn-outline flex items-center gap-2 text-xs">
+            <Printer className="h-4 w-4" /> Print
+          </button>
         </div>
 
         {/* Status Stepper */}

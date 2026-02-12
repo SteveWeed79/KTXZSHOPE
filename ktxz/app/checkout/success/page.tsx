@@ -89,7 +89,7 @@ export default async function CheckoutSuccessPage({
   void Card;
 
   return (
-    <main className="min-h-[80vh] py-12 max-w-5xl mx-auto">
+    <main className="min-h-[80vh] section-spacing max-w-5xl mx-auto">
       <div className="border border-border bg-card rounded-3xl p-10">
         <div className="text-center">
           <h1 className="text-4xl brand-heading-italic">
@@ -110,7 +110,7 @@ export default async function CheckoutSuccessPage({
           </div>
         </div>
 
-        <div className="mt-10 grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="mt-10 grid grid-cols-1 lg:grid-cols-12 grid-spacing">
           <section className="lg:col-span-7">
             <h2 className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-4">
               Items
