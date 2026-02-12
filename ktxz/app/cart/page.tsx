@@ -85,7 +85,7 @@ export default async function CartPage() {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 grid-spacing">
           <section className="lg:col-span-8 space-y-4">
             {rows.map((r) => {
               const unavailable = !r.isActive || r.status === "sold";

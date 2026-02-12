@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { ArrowLeft, Download, Package, Clock, CreditCard, DollarSign } from "lucide-react";
+import { Download, Package, Clock, CreditCard, DollarSign } from "lucide-react";
 
 interface Order {
   _id: string;
@@ -179,19 +179,11 @@ export default function AdminOrdersPage() {
     <div className="min-h-screen py-8">
       <div className="max-w-7xl mx-auto px-4">
         {/* Header */}
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Order Management</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Manage and track all customer orders
-            </p>
-          </div>
-          <Link
-            href="/admin"
-            className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-2 transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" /> Back to Admin
-          </Link>
+        <div className="mb-8">
+          <h1 className="text-3xl brand-heading">Order Management</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Manage and track all customer orders
+          </p>
         </div>
 
         {/* Stats */}

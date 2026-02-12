@@ -19,9 +19,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased bg-background text-foreground`}>
         <ThemeProvider>
           <Navbar />
-          <div className="max-w-7xl mx-auto px-4">
-            {children}
-          </div>
+          {children}
           <Toaster position="bottom-right" richColors />
         </ThemeProvider>
       </body>

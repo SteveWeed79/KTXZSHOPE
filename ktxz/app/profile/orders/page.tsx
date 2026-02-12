@@ -56,7 +56,7 @@ export default async function OrdersPage() {
     .lean();
 
   return (
-    <main className="py-12 max-w-6xl mx-auto">
+    <main className="section-spacing max-w-6xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-10 border-b border-border pb-6">
         <div>

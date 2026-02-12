@@ -49,14 +49,14 @@ const VaultTimer: React.FC<VaultTimerProps> = ({ expiryDate }) => {
 
   if (timeLeft === "Featured" || !timeLeft) {
     return (
-      <span className="text-[9px] font-bold uppercase tracking-wider text-primary bg-primary/10 px-2 py-1 rounded border border-primary/20">
+      <span className="text-[9px] font-bold uppercase tracking-wider text-white bg-primary px-2 py-1 rounded">
         Featured
       </span>
     );
   }
 
   return (
-    <span className="text-[9px] font-bold uppercase tracking-wider text-primary bg-primary/10 px-2 py-1 rounded border border-primary/20">
+    <span className="text-[9px] font-bold uppercase tracking-wider text-white bg-primary px-2 py-1 rounded">
       Ends In: {timeLeft}
     </span>
   );

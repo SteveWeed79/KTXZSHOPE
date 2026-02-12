@@ -35,7 +35,7 @@ export default async function SearchPage({
           .lean()) as SearchCard[]);
 
   return (
-    <main className="min-h-screen px-6 py-12 max-w-4xl mx-auto">
+    <main className="min-h-screen px-6 section-spacing max-w-4xl mx-auto">
       <h1 className="text-3xl font-bold tracking-tight uppercase mb-2">
         Search Results
       </h1>
