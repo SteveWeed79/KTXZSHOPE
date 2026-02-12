@@ -5,6 +5,7 @@ import Brand from "@/models/Brand";
 import Card from "@/models/Card";
 import dbConnect from "@/lib/dbConnect";
 import { auth } from "@/auth";
+import { isAdminUser } from "@/lib/isAdmin";
 
 const slugify = (text: string) =>
   text
@@ -27,10 +28,9 @@ function parseIntSafe(value: unknown, fallback: number) {
 
 async function checkAdmin() {
   const session = await auth();
-  const isAdmin =
-    session?.user?.email === process.env.ADMIN_EMAIL ||
-    (session?.user as { role?: string })?.role === "admin";
-  if (!isAdmin) throw new Error("Unauthorized Access Required.");
+  if (!isAdminUser(session?.user as { email?: string; role?: string })) {
+    throw new Error("Unauthorized Access Required.");
+  }
 }
 
 export async function createBrand(formData: FormData) {
