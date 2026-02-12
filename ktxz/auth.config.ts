@@ -1,5 +1,6 @@
 // ktxz/auth.config.ts
 import type { NextAuthConfig } from "next-auth";
+import { isAdminUser } from "@/lib/isAdmin";
 
 export const authConfig = {
   pages: {
@@ -8,20 +9,12 @@ export const authConfig = {
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
-      const userRole = (auth?.user as any)?.role;
-      const userEmail = auth?.user?.email;
-
       const pathname = nextUrl.pathname;
 
       const isAdminPage = pathname.startsWith("/admin");
       const isProfilePage = pathname.startsWith("/profile");
 
-      // Admin if DB role is admin OR email matches env ADMIN_EMAIL
-      const isAdmin =
-        userRole === "admin" ||
-        (!!userEmail && userEmail === process.env.ADMIN_EMAIL);
-
-      if (isAdminPage) return isLoggedIn && isAdmin;
+      if (isAdminPage) return isLoggedIn && isAdminUser(auth?.user as { email?: string; role?: string });
       if (isProfilePage) return isLoggedIn;
 
       return true;

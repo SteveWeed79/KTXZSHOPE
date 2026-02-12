@@ -16,6 +16,7 @@ import { authConfig } from "./auth.config";
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
 import { mergeCookieCartIntoUserCart } from "@/lib/cartHelpers";
+import { isAdminUser } from "@/lib/isAdmin";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -52,11 +53,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async jwt({ token, user, trigger }) {
       if (user) {
         token.id = user.id;
-        const isAdmin = 
-          (user as any).role === "admin" || 
-          user.email === process.env.ADMIN_EMAIL;
-        
-        token.role = isAdmin ? "admin" : "customer";
+        token.role = isAdminUser(user as { email?: string; role?: string }) ? "admin" : "customer";
 
         // IMPORTANT: Merge cookie cart into user cart on login
         // This happens once per login session

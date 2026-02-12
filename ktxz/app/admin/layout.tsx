@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import { LayoutDashboard, Package, Star, Settings, ArrowLeft } from "lucide-react";
+import { isAdminUser } from "@/lib/isAdmin";
+import { LayoutDashboard, Package, Star, Settings, ArrowLeft, Users } from "lucide-react";
 
 export default async function AdminLayout({
   children,
@@ -9,11 +10,7 @@ export default async function AdminLayout({
   children: React.ReactNode;
 }) {
   const session = await auth();
-  const isAdmin =
-    session?.user?.email === process.env.ADMIN_EMAIL ||
-    (session?.user as { role?: string })?.role === "admin";
-
-  if (!isAdmin) redirect("/");
+  if (!isAdminUser(session?.user as { email?: string; role?: string })) redirect("/");
 
   return (
     <div className="min-h-screen flex">
@@ -60,6 +57,13 @@ export default async function AdminLayout({
             <Settings className="h-4 w-4" />
             Settings
           </Link>
+          <Link
+            href="/admin/team"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wide opacity-70 hover:opacity-100 hover:bg-background/10 transition-all"
+          >
+            <Users className="h-4 w-4" />
+            Team
+          </Link>
         </nav>
 
         <div className="p-4 border-t border-background/10">
@@ -87,9 +91,9 @@ export default async function AdminLayout({
           <Settings className="h-4 w-4" />
           <span className="text-[8px] uppercase font-bold tracking-wide">Settings</span>
         </Link>
-        <Link href="/shop" className="flex flex-col items-center gap-1 px-3 py-1.5 opacity-70 hover:opacity-100 transition-all">
-          <ArrowLeft className="h-4 w-4" />
-          <span className="text-[8px] uppercase font-bold tracking-wide">Store</span>
+        <Link href="/admin/team" className="flex flex-col items-center gap-1 px-3 py-1.5 opacity-70 hover:opacity-100 transition-all">
+          <Users className="h-4 w-4" />
+          <span className="text-[8px] uppercase font-bold tracking-wide">Team</span>
         </Link>
       </div>
 
