@@ -3,11 +3,14 @@ import Stripe from "stripe";
 import mongoose from "mongoose";
 import dbConnect from "@/lib/dbConnect";
 import Card from "@/models/Card";
+import Reservation from "@/models/Reservation";
 import { auth } from "@/auth";
 import { RateLimiters, rateLimitResponse } from "@/lib/rateLimit";
 import { errorResponse } from "@/lib/apiResponse";
 import { mustGetStripe, toCents } from "@/lib/stripe";
 import { mustGetEnv } from "@/lib/envValidation";
+
+const RESERVATION_TTL_MINUTES = 30;
 
 export const runtime = "nodejs";
 
@@ -43,6 +46,7 @@ export async function POST(req: Request) {
 
     // Load cards & validate availability
     const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
+    const reservationItems: Array<{ card: mongoose.Types.ObjectId; quantity: number }> = [];
 
     for (const item of body.items) {
       const cardId = (item.cardId || "").trim();
@@ -93,6 +97,7 @@ export async function POST(req: Request) {
             },
           },
         });
+        reservationItems.push({ card: card._id, quantity: 1 });
         continue;
       }
 
@@ -131,7 +136,17 @@ export async function POST(req: Request) {
           },
         },
       });
+      reservationItems.push({ card: card._id, quantity: qty });
     }
+
+    // Create inventory reservation to hold items during Stripe checkout
+    const reservation = await Reservation.create({
+      holderKey: session.user.id,
+      holderType: "user",
+      items: reservationItems,
+      status: "active",
+      expiresAt: new Date(Date.now() + RESERVATION_TTL_MINUTES * 60 * 1000),
+    });
 
     // Create checkout session
     const checkoutSession = await stripe.checkout.sessions.create({
@@ -149,12 +164,21 @@ export async function POST(req: Request) {
       // Stripe Tax (needs to be enabled/configured in Stripe dashboard)
       automatic_tax: { enabled: true },
 
-      // You can later add shipping rates (Shippo phase). For now, no shipping charge.
-      // If you want a flat shipping price now, we can add a shipping_rate here later.
+      // Link reservation so webhook can consume it on payment success
+      metadata: {
+        reservationId: reservation._id.toString(),
+        userId: session.user.id ?? "",
+      },
 
-      success_url: `${siteUrl}/shop?success=1`,
+      success_url: `${siteUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${siteUrl}/cart?canceled=1`,
     });
+
+    // Link the Stripe session back to the reservation
+    await Reservation.updateOne(
+      { _id: reservation._id },
+      { $set: { stripeCheckoutSessionId: checkoutSession.id } }
+    );
 
     return NextResponse.json({ url: checkoutSession.url });
   } catch (error) {
