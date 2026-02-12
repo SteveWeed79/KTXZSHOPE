@@ -256,9 +256,9 @@ export default async function AdminPage() {
           </form>
         </AdminSection>
 
-        {/* Vault Schedule */}
+        {/* Featured Schedule */}
         <AdminSection
-          title="Vault Schedule"
+          title="Featured Schedule"
           subtitle="Program time-based releases"
         >
           <div className="space-y-4">
@@ -350,7 +350,7 @@ export default async function AdminPage() {
                         type="submit"
                         className="px-4 py-2 text-[10px] font-bold uppercase rounded-lg border border-border text-muted-foreground hover:border-primary hover:text-primary transition-all"
                       >
-                        Remove from Vault
+                        Remove from Featured
                       </button>
                     </form>
                   )}
