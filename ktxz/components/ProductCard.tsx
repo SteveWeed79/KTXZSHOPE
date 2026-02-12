@@ -36,7 +36,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ card }) => {
         </div>
       )}
 
-      <div className="relative w-full aspect-[2.5/3.5] overflow-hidden rounded-medium-soft bg-muted border-2 border-transparent group-hover:border-primary transition-all duration-300 elevation-card">
+      <div className="relative w-full aspect-[2.5/3.5] overflow-hidden rounded-medium-soft bg-muted border border-transparent group-hover:border-primary transition-all duration-300 elevation-card">
         <img
           src={card.image || "/placeholder-card.png"}
           alt={card.name}

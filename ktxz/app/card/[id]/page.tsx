@@ -86,7 +86,7 @@ export default async function CardPage({
             {canBuy ? (
               <form action={addToCart}>
                 <input type="hidden" name="cardId" value={card._id.toString()} />
-                <button className="py-4 bg-primary text-primary-foreground font-bold text-lg rounded-xl transition-all hover:brightness-90 hover:scale-[1.01] active:scale-[0.98] shadow-lg shadow-primary/20 w-full flex items-center justify-center gap-2">
+                <button className="w-full btn-primary py-4 text-lg flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.98] shadow-lg shadow-primary/20">
                   <ShoppingCart className="h-5 w-5" />
                   Add to Cart
                 </button>

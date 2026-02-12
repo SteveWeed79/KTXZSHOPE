@@ -126,7 +126,7 @@ export default async function CheckoutPage() {
         </section>
 
         <aside className="lg:col-span-5">
-          <div className="border border-border bg-card rounded-2xl p-6 sticky top-24">
+          <div className="border-2 border-foreground/20 dark:border-foreground/80 bg-card rounded-2xl p-6 sticky top-24">
             <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-6">
               Payment Summary
             </h2>
@@ -156,10 +156,10 @@ export default async function CheckoutPage() {
             <form action={createCheckoutSession} className="mt-6">
               <button
                 disabled={hasUnavailable}
-                className={`w-full font-bold py-4 rounded-xl transition-all text-sm flex items-center justify-center gap-2 ${
+                className={`w-full py-4 text-sm flex items-center justify-center gap-2 ${
                   hasUnavailable
-                    ? "bg-muted text-muted-foreground cursor-not-allowed border border-border"
-                    : "bg-primary text-primary-foreground hover:brightness-90 shadow-lg shadow-primary/20"
+                    ? "bg-muted text-muted-foreground cursor-not-allowed border border-border rounded-xl font-bold transition-all"
+                    : "btn-primary shadow-lg shadow-primary/20 dark:shadow-primary/30"
                 }`}
               >
                 <ShieldCheck className="h-4 w-4" />
