@@ -8,12 +8,12 @@
     --foreground: 240 10% 3.9%;
     --card: 0 0% 98%;
     --card-foreground: 240 10% 3.9%;
-    --primary: 0 100% 50%;
+    --primary: 0 72.2% 50.6%;
     --primary-foreground: 0 0% 100%;
     --muted: 240 4.8% 95.9%;
     --muted-foreground: 240 3.8% 46.1%;
     --border: 240 5.9% 90%;
-    --ring: 0 100% 50%;
+    --ring: 0 72.2% 50.6%;
     --radius: 0.75rem;
   }
 
@@ -22,12 +22,12 @@
     --foreground: 0 0% 98%;
     --card: 240 10% 5.9%;
     --card-foreground: 0 0% 98%;
-    --primary: 0 100% 50%;
+    --primary: 0 84.2% 60.2%;
     --primary-foreground: 0 0% 100%;
     --muted: 240 3.7% 15.9%;
     --muted-foreground: 240 5% 64.9%;
     --border: 240 3.7% 15.9%;
-    --ring: 0 100% 50%;
+    --ring: 0 84.2% 60.2%;
   }
 }
 
@@ -38,6 +38,15 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  /* Smooth 300ms light/dark mode transition */
+  html.light,
+  html.dark {
+    transition: background-color 300ms ease, color 300ms ease;
+  }
+  html.light *,
+  html.dark * {
+    transition: background-color 300ms ease, color 300ms ease, border-color 300ms ease;
   }
 }
 

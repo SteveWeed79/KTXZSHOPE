@@ -30,7 +30,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ card }) => {
 
       {card.isVault && (!hasExpiry || !expiryIsValid) && (
         <div className="absolute top-3 left-3 z-20">
-          <span className="text-[9px] text-primary font-bold uppercase tracking-wider bg-primary/10 backdrop-blur-sm border border-primary/30 px-2 py-1 rounded">
+          <span className="text-[9px] text-white font-bold uppercase tracking-wider bg-primary px-2 py-1 rounded">
             Featured
           </span>
         </div>
