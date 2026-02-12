@@ -1,10 +1,19 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import mongoose from "mongoose";
 import Brand from "@/models/Brand";
 import Card from "@/models/Card";
 import dbConnect from "@/lib/dbConnect";
 import { auth } from "@/auth";
+
+function validateObjectId(id: unknown, label = "ID"): string {
+  const str = String(id || "").trim();
+  if (!str || !mongoose.Types.ObjectId.isValid(str)) {
+    throw new Error(`Invalid ${label}.`);
+  }
+  return str;
+}
 
 const slugify = (text: string) =>
   text
@@ -48,7 +57,7 @@ export async function deleteBrand(formData: FormData) {
   await checkAdmin();
   await dbConnect();
 
-  const brandId = formData.get("brandId") as string;
+  const brandId = validateObjectId(formData.get("brandId"), "Brand ID");
   const hasCards = await Card.countDocuments({ brand: brandId });
   if (hasCards) throw new Error("Cannot delete category with active cards.");
 
@@ -62,8 +71,7 @@ export async function createCard(formData: FormData) {
 
   const rawData = Object.fromEntries(formData.entries());
 
-  const brandId = rawData.brandId || rawData.brand;
-  if (!brandId) throw new Error("Category/Brand is required.");
+  const brandId = validateObjectId(rawData.brandId || rawData.brand, "Category/Brand");
 
   const name = String(rawData.name || "").trim();
   if (!name) throw new Error("Card name is required.");
@@ -117,8 +125,7 @@ export async function updateCard(formData: FormData) {
   await dbConnect();
 
   const rawData = Object.fromEntries(formData.entries());
-  const cardId = String(rawData.cardId || "").trim();
-  if (!cardId) throw new Error("Card ID required.");
+  const cardId = validateObjectId(rawData.cardId, "Card ID");
 
   // Build a safe update object: only update fields that exist in the form
   const update: Record<string, unknown> = {
@@ -182,7 +189,7 @@ export async function deleteCard(formData: FormData) {
   await checkAdmin();
   await dbConnect();
 
-  const cardId = formData.get("cardId") as string;
+  const cardId = validateObjectId(formData.get("cardId"), "Card ID");
   await Card.findByIdAndDelete(cardId);
 
   revalidatePath("/admin");
@@ -195,7 +202,7 @@ export async function updateVaultStatus(formData: FormData) {
   await dbConnect();
 
   const rawData = Object.fromEntries(formData.entries());
-  const cardId = rawData.cardId as string;
+  const cardId = validateObjectId(rawData.cardId, "Card ID");
   const release = rawData.vaultReleaseDate as string;
   const expiry = rawData.vaultExpiryDate as string;
 
@@ -215,7 +222,7 @@ export async function removeFromVault(formData: FormData) {
   await checkAdmin();
   await dbConnect();
 
-  const cardId = formData.get("cardId") as string;
+  const cardId = validateObjectId(formData.get("cardId"), "Card ID");
 
   await Card.findByIdAndUpdate(cardId, {
     isVault: false,

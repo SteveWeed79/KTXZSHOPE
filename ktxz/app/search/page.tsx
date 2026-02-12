@@ -2,6 +2,10 @@ import dbConnect from "@/lib/dbConnect";
 import Card from "@/models/Card";
 import Link from "next/link";
 
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 type SearchCard = {
   _id: any;
   name: string;
@@ -19,15 +23,16 @@ export default async function SearchPage({
 
   const { q: rawQ } = await searchParams;
   const q = (rawQ || "").trim();
+  const safeQ = escapeRegex(q);
 
   const results =
     q.length === 0
       ? ([] as SearchCard[])
       : ((await Card.find({
           $or: [
-            { name: { $regex: q, $options: "i" } },
-            { set: { $regex: q, $options: "i" } },
-            { rarity: { $regex: q, $options: "i" } },
+            { name: { $regex: safeQ, $options: "i" } },
+            { set: { $regex: safeQ, $options: "i" } },
+            { rarity: { $regex: safeQ, $options: "i" } },
           ],
         })
           .populate("brand")
