@@ -5,9 +5,9 @@ import Brand from "@/models/Brand";
 import { requireAdmin } from "@/lib/requireAdmin";
 
 export async function GET() {
-  // Block in production — seed is for development only
-  if (process.env.NODE_ENV === "production") {
-    return NextResponse.json({ error: "Seed disabled in production" }, { status: 403 });
+  // Block unless explicitly in development mode
+  if (process.env.NODE_ENV !== "development") {
+    return NextResponse.json({ error: "Seed only available in development" }, { status: 403 });
   }
 
   const adminResult = await requireAdmin();

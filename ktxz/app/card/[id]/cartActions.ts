@@ -18,8 +18,13 @@ import Card from "@/models/Card";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { getCartItemQuantity, setCartItemQuantity } from "@/lib/cartHelpers";
+import { checkActionRateLimit } from "@/lib/rateLimit";
 
 export async function addToCart(formData: FormData) {
+  // Rate limit: 30 add-to-cart per minute per IP
+  const rl = await checkActionRateLimit("standard", 30, "addToCart");
+  if (!rl.success) redirect("/shop?error=rate-limit");
+
   await dbConnect();
 
   const cardId = String(formData.get("cardId") || "").trim();

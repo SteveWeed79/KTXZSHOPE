@@ -62,16 +62,54 @@ export default async function CheckoutSuccessPage({
     );
   }
 
-  const session = await stripe.checkout.sessions.retrieve(session_id, {
-    expand: ["line_items.data.price.product"],
-  });
+  // Authenticate user first to validate ownership
+  const userSession = await auth();
+  const userId = userSession?.user?.id ?? null;
+  const userEmail = userSession?.user?.email?.toLowerCase() ?? "";
+
+  let session;
+  try {
+    session = await stripe.checkout.sessions.retrieve(session_id, {
+      expand: ["line_items.data.price.product"],
+    });
+  } catch {
+    return (
+      <main className="min-h-[80vh] py-16 max-w-4xl mx-auto">
+        <div className="border border-border bg-card rounded-3xl p-10 text-center">
+          <h1 className="text-3xl brand-heading-italic">Invalid Session</h1>
+          <p className="text-muted-foreground font-mono text-[10px] tracking-[0.3em] uppercase mt-4">
+            The checkout session could not be found
+          </p>
+          <Link href="/shop" className="btn-primary inline-block mt-10">
+            Return to Shop
+          </Link>
+        </div>
+      </main>
+    );
+  }
+
+  // Validate that this session belongs to the current user
+  const sessionEmail = (session.customer_details?.email || session.customer_email || "").toLowerCase();
+  if (userEmail && sessionEmail && userEmail !== sessionEmail) {
+    return (
+      <main className="min-h-[80vh] py-16 max-w-4xl mx-auto">
+        <div className="border border-border bg-card rounded-3xl p-10 text-center">
+          <h1 className="text-3xl brand-heading-italic">Access Denied</h1>
+          <p className="text-muted-foreground font-mono text-[10px] tracking-[0.3em] uppercase mt-4">
+            This order does not belong to your account
+          </p>
+          <Link href="/shop" className="btn-primary inline-block mt-10">
+            Return to Shop
+          </Link>
+        </div>
+      </main>
+    );
+  }
 
   const paid = session.payment_status === "paid";
 
   if (paid) {
     // Clear cart (handles both database and cookie)
-    const userSession = await auth();
-    const userId = userSession?.user?.id ?? null;
     await clearCart(userId);
   }
 
@@ -96,7 +134,7 @@ export default async function CheckoutSuccessPage({
             {paid ? "Payment Authorized" : "Payment Pending"}
           </h1>
           <p className="text-muted-foreground font-mono text-[10px] tracking-[0.3em] uppercase mt-3">
-            Session: {session.id}
+            Your order is being processed
           </p>
 
           <div
