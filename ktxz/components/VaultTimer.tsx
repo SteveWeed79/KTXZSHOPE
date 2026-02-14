@@ -15,7 +15,7 @@ const VaultTimer: React.FC<VaultTimerProps> = ({ expiryDate }) => {
       const expiry = new Date(expiryDate).getTime();
 
       if (!Number.isFinite(expiry)) {
-        setTimeLeft("Vault Active");
+        setTimeLeft("Featured");
         return;
       }
 
@@ -41,22 +41,22 @@ const VaultTimer: React.FC<VaultTimerProps> = ({ expiryDate }) => {
 
   if (timeLeft === "Expired") {
     return (
-      <span className="text-[9px] font-bold uppercase tracking-wider text-orange-600 dark:text-orange-300 bg-orange-100 dark:bg-orange-950/60 px-2 py-1 rounded border border-orange-300 dark:border-orange-500/20">
-        Vault Expired
+      <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground bg-muted px-2 py-1 rounded border border-border">
+        Expired
       </span>
     );
   }
 
-  if (timeLeft === "Vault Active" || !timeLeft) {
+  if (timeLeft === "Featured" || !timeLeft) {
     return (
-      <span className="text-[9px] font-bold uppercase tracking-wider text-primary bg-primary/10 px-2 py-1 rounded border border-primary/20">
-        Vault Active
+      <span className="text-[9px] font-bold uppercase tracking-wider text-white bg-primary px-2 py-1 rounded">
+        Featured
       </span>
     );
   }
 
   return (
-    <span className="text-[9px] font-bold uppercase tracking-wider text-primary bg-primary/10 px-2 py-1 rounded border border-primary/20">
+    <span className="text-[9px] font-bold uppercase tracking-wider text-white bg-primary px-2 py-1 rounded">
       Ends In: {timeLeft}
     </span>
   );

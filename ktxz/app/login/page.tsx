@@ -78,7 +78,7 @@ export default function AuthPage() {
     <main className="min-h-screen flex items-center justify-center p-6">
       <div className="w-full max-w-md bg-card p-8 rounded-2xl border border-border">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold uppercase tracking-tighter">
+          <h1 className="text-3xl brand-heading">
             {isLogin ? "Sign In" : "Create Account"}
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
@@ -119,7 +119,7 @@ export default function AuthPage() {
 
             <button
               disabled={loading}
-              className="w-full bg-primary text-primary-foreground font-bold py-4 rounded-xl hover:brightness-90 transition-all uppercase text-xs tracking-widest disabled:opacity-50"
+              className="w-full btn-primary py-4 disabled:opacity-50"
             >
               {loading ? "Signing in..." : "Sign In"}
             </button>
@@ -165,7 +165,7 @@ export default function AuthPage() {
                 { ok: validation.matches, label: "Passwords match" },
               ].map((rule) => (
                 <div key={rule.label} className="flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-full ${rule.ok ? "bg-green-500" : "bg-muted"}`} />
+                  <span className={`w-2 h-2 rounded-full ${rule.ok ? "bg-primary" : "bg-muted"}`} />
                   {rule.label}
                 </div>
               ))}
@@ -173,7 +173,7 @@ export default function AuthPage() {
 
             <button
               disabled={loading || !canRegister}
-              className="w-full bg-primary text-primary-foreground font-bold py-4 rounded-xl hover:brightness-90 transition-all uppercase text-xs tracking-widest disabled:opacity-50"
+              className="w-full btn-primary py-4 disabled:opacity-50"
             >
               {loading ? "Creating account..." : "Create Account"}
             </button>

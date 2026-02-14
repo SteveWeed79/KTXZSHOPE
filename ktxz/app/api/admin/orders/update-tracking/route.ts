@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/requireAdmin";
 import dbConnect from "@/lib/dbConnect";
 import Order from "@/models/Order";
+import { errorResponse } from "@/lib/apiResponse";
 
 export async function POST(req: NextRequest) {
   try {
@@ -44,10 +45,6 @@ export async function POST(req: NextRequest) {
       order,
     });
   } catch (error) {
-    console.error("Error updating tracking information:", error);
-    return NextResponse.json(
-      { error: "Failed to update tracking information" },
-      { status: 500 }
-    );
+    return errorResponse(error);
   }
 }

@@ -44,7 +44,7 @@ export default async function CheckoutPage() {
   const subtotal = rows.reduce((sum, r) => sum + Number(r.card.price || 0) * r.qty, 0);
 
   return (
-    <main className="min-h-[80vh] py-12 max-w-6xl mx-auto">
+    <main className="min-h-[80vh] section-spacing max-w-6xl mx-auto">
       <div className="flex items-end justify-between gap-6 mb-10">
         <div>
           <h1 className="text-4xl font-bold uppercase tracking-tighter">Checkout</h1>
@@ -57,7 +57,7 @@ export default async function CheckoutPage() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 grid-spacing">
         <section className="lg:col-span-7 space-y-4">
           <div className="border border-border bg-card rounded-2xl p-6">
             <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-6">
@@ -126,7 +126,7 @@ export default async function CheckoutPage() {
         </section>
 
         <aside className="lg:col-span-5">
-          <div className="border border-border bg-card rounded-2xl p-6 sticky top-24">
+          <div className="border-2 border-foreground/20 dark:border-foreground/80 bg-card rounded-2xl p-6 sticky top-24">
             <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-6">
               Payment Summary
             </h2>
@@ -156,10 +156,10 @@ export default async function CheckoutPage() {
             <form action={createCheckoutSession} className="mt-6">
               <button
                 disabled={hasUnavailable}
-                className={`w-full font-bold py-4 rounded-xl transition-all text-sm flex items-center justify-center gap-2 ${
+                className={`w-full py-4 text-sm flex items-center justify-center gap-2 ${
                   hasUnavailable
-                    ? "bg-muted text-muted-foreground cursor-not-allowed border border-border"
-                    : "bg-primary text-primary-foreground hover:brightness-90 shadow-lg shadow-primary/20"
+                    ? "bg-muted text-muted-foreground cursor-not-allowed border border-border rounded-xl font-bold transition-all"
+                    : "btn-primary shadow-lg shadow-primary/20 dark:shadow-primary/30"
                 }`}
               >
                 <ShieldCheck className="h-4 w-4" />

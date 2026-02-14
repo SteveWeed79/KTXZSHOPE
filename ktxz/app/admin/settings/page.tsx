@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
-import { Save, ArrowLeft, Globe, Shield, Zap } from "lucide-react";
+import { Save, Globe, Shield, Zap } from "lucide-react";
 
 interface SiteSettings {
   storeName: string;
@@ -85,20 +84,12 @@ export default function AdminSettingsPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto py-8 space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Site Settings</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Global configuration for your store
-          </p>
-        </div>
-        <Link
-          href="/admin"
-          className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-2 transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" /> Back to Admin
-        </Link>
+    <div className="max-w-4xl mx-auto section-spacing space-y-8">
+      <div>
+        <h1 className="text-3xl brand-heading">Site Settings</h1>
+        <p className="text-muted-foreground text-sm mt-1">
+          Global configuration for your store
+        </p>
       </div>
 
       {message && (
@@ -106,7 +97,7 @@ export default function AdminSettingsPage() {
           className={`p-3 rounded-lg text-sm ${
             message.includes("Error")
               ? "bg-primary/10 text-primary border border-primary/20"
-              : "bg-green-500/10 text-green-700 dark:text-green-400 border border-green-500/20"
+              : "bg-primary/10 text-primary dark:text-primary border border-primary/20"
           }`}
         >
           {message}
@@ -148,7 +139,7 @@ export default function AdminSettingsPage() {
           </div>
         </section>
 
-        {/* Vault & Maintenance */}
+        {/* Featured & Maintenance */}
         <section className="bg-card border border-border rounded-2xl p-6 space-y-6">
           <h2 className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2">
             <Zap className="h-4 w-4" /> Store Controls
@@ -164,9 +155,9 @@ export default function AdminSettingsPage() {
                 className="rounded accent-primary"
               />
               <div>
-                <span className="text-sm font-medium">Vault Live</span>
+                <span className="text-sm font-medium">Featured Live</span>
                 <p className="text-xs text-muted-foreground">
-                  Enable the vault section on the homepage
+                  Enable the featured section on the homepage
                 </p>
               </div>
             </label>
@@ -246,7 +237,7 @@ export default function AdminSettingsPage() {
       <button
         onClick={handleSave}
         disabled={saving}
-        className="w-full bg-primary text-primary-foreground py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:brightness-90 transition-all disabled:opacity-50"
+        className="w-full btn-primary flex items-center justify-center gap-2 disabled:opacity-50"
       >
         <Save className="h-4 w-4" />
         {saving ? "Saving..." : "Save All Settings"}

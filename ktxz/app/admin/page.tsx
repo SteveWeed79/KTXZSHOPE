@@ -5,6 +5,7 @@ import {
   updateCard,
   deleteCard,
   updateVaultStatus,
+  removeFromVault,
 } from "./actions";
 import dbConnect from "@/lib/dbConnect";
 import Brand from "@/models/Brand";
@@ -13,7 +14,7 @@ import Order from "@/models/Order";
 import AdminSection from "@/components/AdminSection";
 import VaultAutoRefresh from "@/components/VaultAutoRefresh";
 import Link from "next/link";
-import { Package, Clock, CheckCircle, Settings } from "lucide-react";
+import { Package, Clock, CheckCircle } from "lucide-react";
 
 type IdLike = { toString(): string };
 
@@ -76,25 +77,17 @@ export default async function AdminPage() {
     .filter((d): d is Date => !!d);
 
   return (
-    <main className="min-h-screen py-8">
+    <main className="min-h-screen section-spacing">
       <VaultAutoRefresh events={vaultEvents} />
 
       <div className="max-w-5xl mx-auto space-y-6">
-        <header className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tighter uppercase">
-              Admin Dashboard
-            </h1>
-            <p className="text-muted-foreground text-sm mt-1">
-              Inventory, orders & site management
-            </p>
-          </div>
-          <Link
-            href="/admin/settings"
-            className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-          >
-            <Settings className="h-5 w-5" />
-          </Link>
+        <header className="mb-8">
+          <h1 className="text-3xl brand-heading">
+            Dashboard
+          </h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            Inventory, orders & site management
+          </p>
         </header>
 
         {/* Order Management Section */}
@@ -122,15 +115,15 @@ export default async function AdminPage() {
 
             <Link
               href="/admin/orders?status=paid"
-              className="border border-border p-6 rounded-xl hover:border-yellow-500 transition-all group bg-background"
+              className="border border-border p-6 rounded-xl hover:border-primary transition-all group bg-background"
             >
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-bold text-sm uppercase tracking-wider">
                   Pending
                 </h3>
-                <Clock className="h-5 w-5 text-muted-foreground group-hover:text-yellow-500 transition-colors" />
+                <Clock className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
               </div>
-              <span className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">
+              <span className="text-3xl font-bold text-primary">
                 {pendingOrders}
               </span>
               <p className="text-xs text-muted-foreground mt-1">
@@ -140,15 +133,15 @@ export default async function AdminPage() {
 
             <Link
               href="/admin/orders?status=fulfilled"
-              className="border border-border p-6 rounded-xl hover:border-green-500 transition-all group bg-background"
+              className="border border-border p-6 rounded-xl hover:border-primary transition-all group bg-background"
             >
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-bold text-sm uppercase tracking-wider">
                   Fulfilled
                 </h3>
-                <CheckCircle className="h-5 w-5 text-muted-foreground group-hover:text-green-500 transition-colors" />
+                <CheckCircle className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
               </div>
-              <span className="text-3xl font-bold text-green-600 dark:text-green-400">
+              <span className="text-3xl font-bold text-primary">
                 {fulfilledOrders}
               </span>
               <p className="text-xs text-muted-foreground mt-1">
@@ -249,15 +242,15 @@ export default async function AdminPage() {
               placeholder="Image URL"
               className="w-full bg-background border border-border p-4 rounded-xl text-foreground outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
             />
-            <button className="w-full bg-green-600 text-white font-bold py-4 rounded-xl hover:bg-green-500 transition-all uppercase tracking-wide text-sm">
+            <button className="w-full btn-primary py-4 text-sm">
               Push to Live Inventory
             </button>
           </form>
         </AdminSection>
 
-        {/* Vault Schedule */}
+        {/* Featured Schedule */}
         <AdminSection
-          title="Vault Schedule"
+          title="Featured Schedule"
           subtitle="Program time-based releases"
         >
           <div className="space-y-4">
@@ -342,6 +335,17 @@ export default async function AdminPage() {
                       </div>
                     </div>
                   </form>
+                  {card.isVault && (
+                    <form action={removeFromVault} className="mt-3 flex justify-end">
+                      <input type="hidden" name="cardId" value={card._id.toString()} />
+                      <button
+                        type="submit"
+                        className="px-4 py-2 text-[10px] font-bold uppercase rounded-lg border border-border text-muted-foreground hover:border-primary hover:text-primary transition-all"
+                      >
+                        Remove from Featured
+                      </button>
+                    </form>
+                  )}
                 </div>
               );
             })}
@@ -358,7 +362,7 @@ export default async function AdminPage() {
             {cards.map((card) => (
               <div
                 key={card._id.toString()}
-                className="bg-background border border-border p-6 rounded-2xl group hover:border-blue-500/50 transition-all"
+                className="bg-background border border-border p-6 rounded-2xl group hover:border-primary/50 transition-all"
               >
                 <form action={updateCard} className="space-y-4">
                   <input
@@ -384,7 +388,7 @@ export default async function AdminPage() {
                       <input
                         name="name"
                         defaultValue={card.name}
-                        className="w-full bg-muted/30 border border-border p-2 rounded-lg text-xs text-foreground outline-none focus:ring-1 focus:ring-blue-500"
+                        className="w-full bg-muted/30 border border-border p-2 rounded-lg text-xs text-foreground outline-none focus:ring-1 focus:ring-primary"
                       />
                     </div>
 
@@ -397,7 +401,7 @@ export default async function AdminPage() {
                         type="number"
                         step="0.01"
                         defaultValue={card.price}
-                        className="w-full bg-muted/30 border border-border p-2 rounded-lg text-xs text-foreground outline-none focus:ring-1 focus:ring-blue-500"
+                        className="w-full bg-muted/30 border border-border p-2 rounded-lg text-xs text-foreground outline-none focus:ring-1 focus:ring-primary"
                       />
                     </div>
 
@@ -408,7 +412,7 @@ export default async function AdminPage() {
                       <input
                         name="rarity"
                         defaultValue={card.rarity || ""}
-                        className="w-full bg-muted/30 border border-border p-2 rounded-lg text-xs text-foreground outline-none focus:ring-1 focus:ring-blue-500"
+                        className="w-full bg-muted/30 border border-border p-2 rounded-lg text-xs text-foreground outline-none focus:ring-1 focus:ring-primary"
                       />
                     </div>
 
@@ -419,7 +423,7 @@ export default async function AdminPage() {
                       <input
                         name="image"
                         defaultValue={card.image || ""}
-                        className="w-full bg-muted/30 border border-border p-2 rounded-lg text-[10px] text-muted-foreground outline-none focus:ring-1 focus:ring-blue-500"
+                        className="w-full bg-muted/30 border border-border p-2 rounded-lg text-[10px] text-muted-foreground outline-none focus:ring-1 focus:ring-primary"
                       />
                     </div>
                   </div>
@@ -432,7 +436,7 @@ export default async function AdminPage() {
                     <textarea
                       name="description"
                       defaultValue={card.description || ""}
-                      className="w-full bg-muted/30 border border-border p-3 rounded-lg text-xs text-foreground outline-none focus:ring-1 focus:ring-blue-500 min-h-[80px] resize-y"
+                      className="w-full bg-muted/30 border border-border p-3 rounded-lg text-xs text-foreground outline-none focus:ring-1 focus:ring-primary min-h-[80px] resize-y"
                     />
                   </div>
 
@@ -440,7 +444,7 @@ export default async function AdminPage() {
                   <div className="flex gap-2 pt-2">
                     <button
                       type="submit"
-                      className="flex-1 bg-blue-600/10 border border-blue-500/30 text-blue-500 hover:bg-blue-600 hover:text-white text-[10px] font-bold uppercase py-3 rounded-xl transition-all"
+                      className="flex-1 bg-primary/10 border border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground text-[10px] font-bold uppercase py-3 rounded-xl transition-all"
                     >
                       Save All Changes
                     </button>

@@ -182,12 +182,18 @@ export async function removeFromCart(
 }
 
 /**
- * Clear entire cart
+ * Clear entire cart and cancel any active reservations for the holder
  */
 export async function clearCart(userId: string | null): Promise<void> {
   await dbConnect();
 
   if (userId) {
+    // Cancel active reservations for this user
+    await Reservation.updateMany(
+      { holderKey: userId, holderType: "user", status: "active" },
+      { $set: { status: "cancelled" } }
+    );
+
     // Database cart
     const cart = await Cart.findOne({ user: userId });
     if (cart) {
@@ -199,6 +205,15 @@ export async function clearCart(userId: string | null): Promise<void> {
     // Cookie cart
     const cookieStore = await cookies();
     const cart = getCartFromCookies(cookieStore);
+
+    // Cancel active reservations for this guest
+    if (cart.id) {
+      await Reservation.updateMany(
+        { holderKey: cart.id, holderType: "guest", status: "active" },
+        { $set: { status: "cancelled" } }
+      );
+    }
+
     clearCookieCart(cart);
     saveCartToCookies(cookieStore, cart);
   }

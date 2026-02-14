@@ -30,11 +30,11 @@ function formatMoney(amount: number) {
 
 function getStatusColor(status: string) {
   const colors = {
-    pending: "text-yellow-500 bg-yellow-950/20 border-yellow-900/50",
-    paid: "text-green-500 bg-green-950/20 border-green-900/50",
-    fulfilled: "text-blue-500 bg-blue-950/20 border-blue-900/50",
-    cancelled: "text-gray-500 bg-gray-900/20 border-gray-800/50",
-    refunded: "text-orange-500 bg-orange-950/20 border-orange-900/50",
+    pending: "text-primary/70 bg-primary/10 border-primary/20",
+    paid: "text-primary bg-primary/10 border-primary/30",
+    fulfilled: "text-foreground bg-muted border-border",
+    cancelled: "text-muted-foreground bg-muted border-border",
+    refunded: "text-muted-foreground bg-muted border-border",
   };
   return colors[status as keyof typeof colors] || colors.pending;
 }
@@ -56,21 +56,21 @@ export default async function OrdersPage() {
     .lean();
 
   return (
-    <main className="py-12 max-w-6xl mx-auto">
+    <main className="section-spacing max-w-6xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-10 border-b border-gray-900 pb-6">
+      <div className="flex items-center justify-between mb-10 border-b border-border pb-6">
         <div>
-          <h1 className="text-4xl font-black italic uppercase tracking-tighter text-white">
+          <h1 className="text-4xl brand-heading-italic">
             Order History
           </h1>
-          <p className="text-gray-500 font-mono text-[10px] tracking-[0.3em] uppercase mt-2">
+          <p className="text-muted-foreground font-mono text-[10px] tracking-[0.3em] uppercase mt-2">
             Mission Archive // {orders.length} Total Transmissions
           </p>
         </div>
 
         <Link
           href="/profile"
-          className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 hover:text-white transition-colors"
+          className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground transition-colors"
         >
           ← Back to Profile
         </Link>
@@ -78,16 +78,16 @@ export default async function OrdersPage() {
 
       {orders.length === 0 ? (
         /* Empty State */
-        <div className="border border-dashed border-gray-900 rounded-3xl bg-gray-950/20 p-12 text-center">
+        <div className="border border-dashed border-border rounded-3xl bg-card p-12 text-center">
           <div className="w-12 h-12 mx-auto mb-4 opacity-20">
             <svg fill="currentColor" viewBox="0 0 24 24">
               <path d="M20 4H4v2h16V4zm1 10v-2l-1-5H4l-1 5v2h1v6h10v-6h4v6h2v-6h1zm-9 4H6v-4h6v4z" />
             </svg>
           </div>
-          <h2 className="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">
+          <h2 className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-2">
             No Orders Found
           </h2>
-          <p className="text-[10px] text-gray-700 uppercase mb-6">
+          <p className="text-[10px] text-muted-foreground uppercase mb-6">
             Your order archive is currently empty
           </p>
           <Link href="/shop" className="btn-primary inline-block">
@@ -108,13 +108,13 @@ export default async function OrdersPage() {
               <Link
                 key={orderId}
                 href={`/profile/orders/${orderId}`}
-                className="block border border-gray-900 bg-black/40 rounded-2xl p-6 hover:border-red-600 transition-all group"
+                className="block border border-border bg-card rounded-2xl p-6 hover:border-primary transition-all group"
               >
                 <div className="flex items-start justify-between gap-6">
                   {/* Left: Order Info */}
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                      <p className="text-white font-black uppercase tracking-tight text-sm">
+                      <p className="text-foreground font-black uppercase tracking-tight text-sm">
                         Order #{orderId.slice(-8)}
                       </p>
                       <span
@@ -126,17 +126,17 @@ export default async function OrdersPage() {
                       </span>
                     </div>
 
-                    <p className="text-gray-500 text-[10px] font-mono uppercase tracking-[0.3em]">
+                    <p className="text-muted-foreground text-[10px] font-mono uppercase tracking-[0.3em]">
                       {formatDate(createdAt)} // {itemCount} Item{itemCount !== 1 ? "s" : ""}
                     </p>
 
                     {/* Tracking Number (if available) */}
                     {order.trackingNumber && (
                       <div className="mt-3 flex items-center gap-2">
-                        <span className="text-[9px] text-gray-600 uppercase font-mono">
+                        <span className="text-[9px] text-muted-foreground uppercase font-mono">
                           Tracking:
                         </span>
-                        <span className="text-[9px] text-green-500 font-mono">
+                        <span className="text-[9px] text-primary font-mono">
                           {order.trackingNumber}
                         </span>
                       </div>
@@ -146,14 +146,14 @@ export default async function OrdersPage() {
                   {/* Right: Amount + Arrow */}
                   <div className="text-right flex items-center gap-4">
                     <div>
-                      <p className="text-[10px] text-gray-600 uppercase font-mono tracking-widest">
+                      <p className="text-[10px] text-muted-foreground uppercase font-mono tracking-widest">
                         Total
                       </p>
-                      <p className="text-white font-black text-xl">
+                      <p className="text-foreground font-black text-xl">
                         {formatMoney(total)}
                       </p>
                     </div>
-                    <div className="text-gray-700 group-hover:text-red-600 transition-colors">
+                    <div className="text-muted-foreground group-hover:text-primary transition-colors">
                       →
                     </div>
                   </div>

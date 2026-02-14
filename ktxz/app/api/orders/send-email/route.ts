@@ -11,25 +11,15 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { requireAdmin } from "@/lib/requireAdmin";
 import dbConnect from "@/lib/dbConnect";
 import Order from "@/models/Order";
+import { errorResponse } from "@/lib/apiResponse";
 
 export async function POST(req: NextRequest) {
   try {
-    // Check admin authentication
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userEmail = session.user.email;
-    const userRole = (session.user as { role?: string })?.role;
-    const isAdmin = userRole === "admin" || userEmail === process.env.ADMIN_EMAIL;
-
-    if (!isAdmin) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    const adminResult = await requireAdmin();
+    if (adminResult instanceof NextResponse) return adminResult;
 
     const body = await req.json();
     const { orderId, emailType } = body;
@@ -90,7 +80,6 @@ export async function POST(req: NextRequest) {
       message: `${emailType} email sent successfully (PLACEHOLDER - integrate email service)`,
     });
   } catch (error) {
-    console.error("Error sending email:", error);
-    return NextResponse.json({ error: "Failed to send email" }, { status: 500 });
+    return errorResponse(error);
   }
 }

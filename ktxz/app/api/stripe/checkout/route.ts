@@ -1,22 +1,18 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
+import mongoose from "mongoose";
 import dbConnect from "@/lib/dbConnect";
 import Card from "@/models/Card";
+import Reservation from "@/models/Reservation";
 import { auth } from "@/auth";
 import { RateLimiters, rateLimitResponse } from "@/lib/rateLimit";
+import { errorResponse } from "@/lib/apiResponse";
+import { mustGetStripe, toCents } from "@/lib/stripe";
+import { mustGetEnv } from "@/lib/envValidation";
+
+const RESERVATION_TTL_MINUTES = 30;
 
 export const runtime = "nodejs";
-
-function mustGetEnv(name: string) {
-  const v = process.env[name];
-  if (!v) throw new Error(`Missing ${name} env var.`);
-  return v;
-}
-
-function dollarsToCents(dollars: number) {
-  // Safe conversion for 2-decimal USD style pricing
-  return Math.round((Number(dollars) || 0) * 100);
-}
 
 type CheckoutBody = {
   items: Array<{
@@ -37,13 +33,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
-    const stripeSecret = mustGetEnv("STRIPE_SECRET_KEY");
-    const siteUrl = mustGetEnv("NEXTAUTH_URL"); // you already use this for password reset links
-
-    const stripe = new Stripe(stripeSecret, {
-      // NOTE: Must match the Stripe SDK's allowed literal type union for apiVersion.
-      apiVersion: "2026-01-28.clover",
-    });
+    const siteUrl = mustGetEnv("NEXTAUTH_URL");
+    const stripe = mustGetStripe();
 
     const body = (await req.json()) as CheckoutBody;
 
@@ -55,14 +46,15 @@ export async function POST(req: Request) {
 
     // Load cards & validate availability
     const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
+    const reservationItems: Array<{ card: mongoose.Types.ObjectId; quantity: number }> = [];
 
     for (const item of body.items) {
       const cardId = (item.cardId || "").trim();
-      const qty = Math.max(1, Number(item.quantity || 1));
+      const qty = Math.min(99, Math.max(1, Number(item.quantity || 1)));
 
-      if (!cardId) {
+      if (!cardId || !mongoose.Types.ObjectId.isValid(cardId)) {
         return NextResponse.json(
-          { error: "Invalid cart item (missing cardId)." },
+          { error: "Invalid cart item (missing or malformed cardId)." },
           { status: 400 }
         );
       }
@@ -87,7 +79,7 @@ export async function POST(req: Request) {
 
       if (inventoryType === "single") {
         // force quantity = 1 for singles
-        const unitPriceCents = dollarsToCents(Number(card.price));
+        const unitPriceCents = toCents(Number(card.price));
         lineItems.push({
           quantity: 1,
           price_data: {
@@ -105,6 +97,7 @@ export async function POST(req: Request) {
             },
           },
         });
+        reservationItems.push({ card: card._id, quantity: 1 });
         continue;
       }
 
@@ -125,7 +118,7 @@ export async function POST(req: Request) {
         );
       }
 
-      const unitPriceCents = dollarsToCents(Number(card.price));
+      const unitPriceCents = toCents(Number(card.price));
       lineItems.push({
         quantity: qty,
         price_data: {
@@ -143,7 +136,17 @@ export async function POST(req: Request) {
           },
         },
       });
+      reservationItems.push({ card: card._id, quantity: qty });
     }
+
+    // Create inventory reservation to hold items during Stripe checkout
+    const reservation = await Reservation.create({
+      holderKey: session.user.id,
+      holderType: "user",
+      items: reservationItems,
+      status: "active",
+      expiresAt: new Date(Date.now() + RESERVATION_TTL_MINUTES * 60 * 1000),
+    });
 
     // Create checkout session
     const checkoutSession = await stripe.checkout.sessions.create({
@@ -161,15 +164,24 @@ export async function POST(req: Request) {
       // Stripe Tax (needs to be enabled/configured in Stripe dashboard)
       automatic_tax: { enabled: true },
 
-      // You can later add shipping rates (Shippo phase). For now, no shipping charge.
-      // If you want a flat shipping price now, we can add a shipping_rate here later.
+      // Link reservation so webhook can consume it on payment success
+      metadata: {
+        reservationId: reservation._id.toString(),
+        userId: session.user.id ?? "",
+      },
 
-      success_url: `${siteUrl}/shop?success=1`,
+      success_url: `${siteUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${siteUrl}/cart?canceled=1`,
     });
 
+    // Link the Stripe session back to the reservation
+    await Reservation.updateOne(
+      { _id: reservation._id },
+      { $set: { stripeCheckoutSessionId: checkoutSession.id } }
+    );
+
     return NextResponse.json({ url: checkoutSession.url });
-  } catch (err: any) {
-    return NextResponse.json({ error: err?.message || "Checkout error" }, { status: 500 });
+  } catch (error) {
+    return errorResponse(error);
   }
 }

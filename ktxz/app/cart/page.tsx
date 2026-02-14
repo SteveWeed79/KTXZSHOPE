@@ -65,9 +65,9 @@ export default async function CartPage() {
   const subtotal = rows.reduce((sum, r) => sum + r.lineTotal, 0);
 
   return (
-    <main className="min-h-[80vh] py-12 max-w-6xl mx-auto">
+    <main className="min-h-[80vh] section-spacing max-w-6xl mx-auto">
       <header className="mb-10">
-        <h1 className="text-4xl font-bold tracking-tighter uppercase">
+        <h1 className="text-4xl brand-heading">
           Your Cart
         </h1>
         <p className="text-muted-foreground text-sm mt-2">
@@ -85,7 +85,7 @@ export default async function CartPage() {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 grid-spacing">
           <section className="lg:col-span-8 space-y-4">
             {rows.map((r) => {
               const unavailable = !r.isActive || r.status === "sold";
@@ -95,7 +95,7 @@ export default async function CartPage() {
               return (
                 <div
                   key={r.cardId}
-                  className="border border-border bg-card rounded-2xl p-5 flex gap-5"
+                  className="bg-card rounded-card elevation-card p-6 flex gap-5"
                 >
                   <div className="w-20 shrink-0">
                     <div className="aspect-[2.5/3.5] bg-muted border border-border rounded-xl overflow-hidden">
@@ -116,7 +116,7 @@ export default async function CartPage() {
                   <div className="flex-1">
                     <div className="flex items-start justify-between gap-4">
                       <div>
-                        <p className="text-foreground font-bold uppercase tracking-tight">
+                        <p className="text-foreground font-bold uppercase tracking-widest">
                           {r.name}
                         </p>
                         <p className="text-muted-foreground text-xs mt-1">
@@ -198,7 +198,7 @@ export default async function CartPage() {
           </section>
 
           <aside className="lg:col-span-4">
-            <div className="border border-border bg-card rounded-2xl p-6 sticky top-24">
+            <div className="bg-card rounded-card elevation-card p-6 sticky top-24">
               <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4">
                 Summary
               </h2>
@@ -213,7 +213,7 @@ export default async function CartPage() {
               </p>
 
               <form action="/api/cart/checkout" method="post" className="mt-6">
-                <button className="w-full bg-primary text-primary-foreground py-4 rounded-xl font-bold hover:brightness-90 transition-all">
+                <button className="w-full btn-primary py-4">
                   Secure Checkout
                 </button>
               </form>

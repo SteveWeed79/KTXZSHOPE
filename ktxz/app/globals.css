@@ -8,26 +8,26 @@
     --foreground: 240 10% 3.9%;
     --card: 0 0% 98%;
     --card-foreground: 240 10% 3.9%;
-    --primary: 0 100% 50%;
+    --primary: 0 72.2% 50.6%;
     --primary-foreground: 0 0% 100%;
     --muted: 240 4.8% 95.9%;
     --muted-foreground: 240 3.8% 46.1%;
     --border: 240 5.9% 90%;
-    --ring: 0 100% 50%;
+    --ring: 0 72.2% 50.6%;
     --radius: 0.75rem;
   }
 
   .dark {
-    --background: 0 0% 3.9%;
+    --background: 0 0% 2%;
     --foreground: 0 0% 98%;
     --card: 240 10% 5.9%;
     --card-foreground: 0 0% 98%;
-    --primary: 0 100% 50%;
+    --primary: 0 84.2% 60.2%;
     --primary-foreground: 0 0% 100%;
     --muted: 240 3.7% 15.9%;
     --muted-foreground: 240 5% 64.9%;
     --border: 240 3.7% 15.9%;
-    --ring: 0 100% 50%;
+    --ring: 0 84.2% 60.2%;
   }
 }
 
@@ -39,18 +39,96 @@
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
+  /* Smooth 300ms light/dark mode transition */
+  html.light,
+  html.dark {
+    transition: background-color 300ms ease, color 300ms ease;
+  }
+  html.light *,
+  html.dark * {
+    transition: background-color 300ms ease, color 300ms ease, border-color 300ms ease;
+  }
 }
 
-/* --- BUTTON CLASSES --- */
+/* --- BORDER RADIUS SYSTEM --- */
+/* Medium-Soft: Premium boutique aesthetic */
+.rounded-medium-soft {
+  @apply rounded-lg; /* 0.5rem = 8px */
+}
+
+.rounded-card {
+  @apply rounded-xl; /* 0.75rem = 12px for larger cards */
+}
+
+/* --- ELEVATION SYSTEM --- */
+/* Light mode: soft shadows. Dark mode: borders only. */
+.elevation-card {
+  @apply shadow-sm border-0;
+}
+
+.dark .elevation-card {
+  @apply shadow-none border border-border;
+}
+
+.elevation-feature {
+  @apply shadow-md border-0;
+}
+
+.dark .elevation-feature {
+  @apply shadow-none border-2 border-border;
+}
+
+/* --- TYPOGRAPHY SYSTEM --- */
+
+.brand-heading {
+  @apply font-black uppercase tracking-widest text-foreground;
+}
+
+.brand-heading-italic {
+  @apply font-black uppercase italic tracking-widest text-foreground;
+}
+
+.brand-label {
+  @apply text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground;
+}
+
+.brand-body {
+  @apply text-sm text-foreground leading-relaxed;
+}
+
+.brand-price {
+  @apply font-bold text-primary tracking-wide;
+}
+
+/* --- SPACING SYSTEM --- */
+/* Premium boutique requires generous whitespace */
+
+.section-spacing {
+  @apply py-12; /* 48px vertical */
+}
+
+.card-spacing {
+  @apply p-6; /* 24px all sides */
+}
+
+.grid-spacing {
+  @apply gap-8; /* 32px between items */
+}
+
+.element-spacing {
+  @apply gap-4; /* 16px for related elements */
+}
+
+/* --- BUTTON SYSTEM --- */
 
 .btn-primary {
-  @apply bg-primary text-primary-foreground font-bold py-3 px-6 rounded-xl transition-all duration-200 uppercase text-xs tracking-widest hover:brightness-90;
+  @apply bg-primary text-white font-bold py-3 px-6 rounded-medium-soft transition-all duration-200 uppercase text-xs tracking-widest hover:brightness-90;
 }
 
 .btn-secondary {
-  @apply bg-card border border-border text-foreground font-bold py-3 px-6 rounded-xl transition-all duration-200 uppercase text-xs tracking-widest hover:border-primary;
+  @apply bg-foreground text-background font-bold py-3 px-6 rounded-medium-soft transition-all duration-200 uppercase text-xs tracking-widest hover:opacity-90;
 }
 
 .btn-outline {
-  @apply border-2 border-border text-foreground font-bold py-3 px-6 rounded-xl transition-all duration-200 uppercase text-xs tracking-widest hover:bg-foreground hover:text-background;
+  @apply border-2 border-foreground text-foreground font-bold py-3 px-6 rounded-medium-soft transition-all duration-200 uppercase text-xs tracking-widest hover:bg-foreground hover:text-background;
 }

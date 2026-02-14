@@ -28,9 +28,9 @@ export default async function ProfilePage() {
   const totalOrders = await Order.countDocuments({ user: userId });
 
   return (
-    <main className="py-12 max-w-4xl mx-auto">
+    <main className="section-spacing max-w-4xl mx-auto">
       {/* Header */}
-      <div className="flex flex-col md:flex-row items-center gap-8 mb-12 border-b border-border pb-12">
+      <div className="flex flex-col md:flex-row items-center grid-spacing mb-12 border-b border-border pb-12">
         <div className="relative">
           <div className="w-28 h-28 rounded-full bg-primary flex items-center justify-center text-4xl font-bold text-primary-foreground border-4 border-background">
             {user.name?.charAt(0) || "U"}
@@ -65,8 +65,8 @@ export default async function ProfilePage() {
             </div>
             <div>
               <label className="block text-xs text-muted-foreground uppercase mb-1">Status</label>
-              <p className="text-sm font-medium text-green-600 dark:text-green-400 flex items-center gap-2">
-                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+              <p className="text-sm font-medium text-primary flex items-center gap-2">
+                <span className="w-2 h-2 bg-primary rounded-full animate-pulse" />
                 Active
               </p>
             </div>

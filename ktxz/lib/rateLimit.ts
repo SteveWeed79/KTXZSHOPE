@@ -10,13 +10,33 @@
 
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
 
+/**
+ * Extract client IP from request headers.
+ * IMPORTANT: In production, ensure your reverse proxy (Vercel, Nginx, etc.)
+ * sets x-forwarded-for / x-real-ip. Without a trusted proxy, these headers
+ * can be spoofed by clients. Prefer x-real-ip when set by the proxy itself.
+ */
 function getIdentifier(request: Request): string {
-  const forwarded = request.headers.get("x-forwarded-for");
+  // Prefer x-real-ip (typically set by the proxy itself, harder to spoof)
   const realIp = request.headers.get("x-real-ip");
-  
-  if (forwarded) return forwarded.split(",")[0].trim();
   if (realIp) return realIp;
-  
+
+  const forwarded = request.headers.get("x-forwarded-for");
+  if (forwarded) return forwarded.split(",")[0].trim();
+
+  return "unknown";
+}
+
+/**
+ * Extract IP from next/headers for use in server actions (no Request object).
+ */
+function getIdentifierFromHeaders(headerStore: { get: (name: string) => string | null }): string {
+  const realIp = headerStore.get("x-real-ip");
+  if (realIp) return realIp;
+
+  const forwarded = headerStore.get("x-forwarded-for");
+  if (forwarded) return forwarded.split(",")[0].trim();
+
   return "unknown";
 }
 
@@ -73,6 +93,40 @@ export const RateLimiters = {
   generous: rateLimit({ interval: 60 * 1000, uniqueTokenPerInterval: 500 }),
   auth: rateLimit({ interval: 60 * 1000, uniqueTokenPerInterval: 500 }),
 };
+
+/**
+ * Rate-limit check for server actions using next/headers.
+ * Returns { success, remaining } — caller decides how to handle failure.
+ */
+export async function checkActionRateLimit(
+  limiterKey: keyof typeof RateLimiters,
+  limit: number,
+  actionName: string
+): Promise<{ success: boolean; remaining: number }> {
+  const { headers } = await import("next/headers");
+  const headerStore = await headers();
+  const identifier = getIdentifierFromHeaders(headerStore);
+  const key = `${actionName}:${identifier}`;
+
+  const limiter = RateLimiters[limiterKey];
+  // Create a minimal Request-like object for the existing check method
+  const fakeReq = { headers: { get: (name: string) => headerStore.get(name) } } as unknown as Request;
+  // Use a namespaced key to avoid collision across different actions
+  const now = Date.now();
+
+  // Direct store access for namespaced key
+  let tokenData = rateLimitStore.get(key);
+  if (!tokenData || now > tokenData.resetTime) {
+    tokenData = { count: 0, resetTime: now + 60_000 };
+    rateLimitStore.set(key, tokenData);
+  }
+  tokenData.count++;
+
+  return {
+    success: tokenData.count <= limit,
+    remaining: Math.max(0, limit - tokenData.count),
+  };
+}
 
 export function rateLimitResponse(result: any) {
   return Response.json(

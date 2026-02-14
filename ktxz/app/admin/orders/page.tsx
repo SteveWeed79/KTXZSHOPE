@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { ArrowLeft, Download, Package, Clock, CreditCard, DollarSign } from "lucide-react";
+import { Download, Package, Clock, CreditCard, DollarSign } from "lucide-react";
 
 interface Order {
   _id: string;
@@ -25,11 +25,11 @@ interface Order {
 type StatusFilter = "all" | "pending" | "paid" | "fulfilled" | "cancelled" | "refunded";
 
 const STATUS_COLORS: Record<string, string> = {
-  pending: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800",
-  paid: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-800",
-  fulfilled: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800",
+  pending: "bg-primary/10 text-primary/70 border-primary/20",
+  paid: "bg-primary/10 text-primary border-primary/30",
+  fulfilled: "bg-muted text-foreground border-border",
   cancelled: "bg-muted text-muted-foreground border-border",
-  refunded: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800",
+  refunded: "bg-muted text-muted-foreground border-border",
 };
 
 export default function AdminOrdersPage() {
@@ -179,19 +179,11 @@ export default function AdminOrdersPage() {
     <div className="min-h-screen py-8">
       <div className="max-w-7xl mx-auto px-4">
         {/* Header */}
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Order Management</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Manage and track all customer orders
-            </p>
-          </div>
-          <Link
-            href="/admin"
-            className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-2 transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" /> Back to Admin
-          </Link>
+        <div className="mb-8">
+          <h1 className="text-3xl brand-heading">Order Management</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Manage and track all customer orders
+          </p>
         </div>
 
         {/* Stats */}
@@ -209,33 +201,33 @@ export default function AdminOrdersPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Pending</p>
-                <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
+                <p className="text-2xl font-bold text-primary">
                   {stats.pending}
                 </p>
               </div>
-              <Clock className="h-5 w-5 text-yellow-500" />
+              <Clock className="h-5 w-5 text-primary" />
             </div>
           </div>
           <div className="bg-card border border-border rounded-xl p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">To Fulfill</p>
-                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                <p className="text-2xl font-bold text-foreground">
                   {stats.paid}
                 </p>
               </div>
-              <CreditCard className="h-5 w-5 text-blue-500" />
+              <CreditCard className="h-5 w-5 text-muted-foreground" />
             </div>
           </div>
           <div className="bg-card border border-border rounded-xl p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Revenue</p>
-                <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                <p className="text-2xl font-bold text-primary">
                   ${(stats.totalRevenue / 100).toFixed(2)}
                 </p>
               </div>
-              <DollarSign className="h-5 w-5 text-green-500" />
+              <DollarSign className="h-5 w-5 text-primary" />
             </div>
           </div>
         </div>

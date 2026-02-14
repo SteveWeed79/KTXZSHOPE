@@ -25,13 +25,20 @@ export default async function CardPage({
   return (
     <div className="min-h-screen py-12 md:py-24">
       <div className="max-w-6xl mx-auto">
-        <Link
-          href={`/menu/${(card.brand as any).slug}`}
-          className="text-muted-foreground hover:text-foreground mb-8 inline-flex items-center gap-2 text-sm transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to {(card.brand as any).name}
-        </Link>
+        <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
+          <Link href="/shop" className="hover:text-foreground transition-colors">
+            Store
+          </Link>
+          <span>/</span>
+          <Link
+            href={`/menu/${(card.brand as any).slug}`}
+            className="hover:text-foreground transition-colors"
+          >
+            {(card.brand as any).name}
+          </Link>
+          <span>/</span>
+          <span className="text-foreground">{card.name}</span>
+        </nav>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-16 mt-6">
           <div className="bg-muted rounded-2xl aspect-[2.5/3.5] border border-border flex items-center justify-center overflow-hidden">
@@ -79,7 +86,7 @@ export default async function CardPage({
             {canBuy ? (
               <form action={addToCart}>
                 <input type="hidden" name="cardId" value={card._id.toString()} />
-                <button className="py-4 bg-primary text-primary-foreground font-bold text-lg rounded-xl transition-all hover:brightness-90 hover:scale-[1.01] active:scale-[0.98] shadow-lg shadow-primary/20 w-full flex items-center justify-center gap-2">
+                <button className="w-full btn-primary py-4 text-lg flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.98] shadow-lg shadow-primary/20">
                   <ShoppingCart className="h-5 w-5" />
                   Add to Cart
                 </button>

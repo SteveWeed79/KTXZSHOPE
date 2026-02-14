@@ -18,7 +18,7 @@ interface ISettingsModel extends Model<ISettings> {
 const SettingsSchema = new Schema(
   {
     _id: { type: String, default: "global" },
-    storeName: { type: String, default: "KTXZ SHOP" },
+    storeName: { type: String, default: "KTXZ" },
     supportEmail: { type: String, default: "support@ktxz.shop" },
     returnPolicy: { type: String, default: "" },
     termsOfService: { type: String, default: "" },

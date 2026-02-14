@@ -6,14 +6,27 @@ import crypto from "crypto";
 import { Resend } from "resend";
 import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
+import { checkActionRateLimit } from "@/lib/rateLimit";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
+
+const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d!@#$%^&*]{8,}$/;
+
+function escapeHtml(str: string): string {
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
 
 /**
  * 1. REQUEST RESET ACTION
  * Sends the branded email with the secure token
  */
 export async function requestPasswordReset(formData: FormData) {
+  // Rate limit: 3 reset requests per minute per IP
+  const rl = await checkActionRateLimit("strict", 3, "requestPasswordReset");
+  if (!rl.success) {
+    return { error: "Too many requests. Please try again later." };
+  }
+
   await dbConnect();
   const email = formData.get("email") as string;
 
@@ -28,10 +41,11 @@ export async function requestPasswordReset(formData: FormData) {
   await user.save();
 
   const resetLink = `${process.env.NEXTAUTH_URL}/reset-password/${token}`;
+  const safeResetLink = escapeHtml(resetLink);
 
   try {
     await resend.emails.send({
-      from: "KTXZ SHOP <onboarding@resend.dev>",
+      from: "KTXZ <onboarding@resend.dev>",
       to: email,
       subject: "RECOVER YOUR ACCESS | KTXZ",
       html: `
@@ -40,7 +54,7 @@ export async function requestPasswordReset(formData: FormData) {
           <p style="color: #666; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; margin-top: 5px;">Security Protocol: Password Reset</p>
           <hr style="border: 0; border-top: 1px solid #222; margin: 20px 0;" />
           <p style="font-size: 14px; line-height: 1.6;">A password reset was initiated for your operative account. Click the button below to establish new credentials.</p>
-          <a href="${resetLink}" style="display: inline-block; background: #ff0000; color: #fff; padding: 15px 35px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 12px; text-transform: uppercase; margin: 20px 0;">Authorize New Password</a>
+          <a href="${safeResetLink}" style="display: inline-block; background: #ff0000; color: #fff; padding: 15px 35px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 12px; text-transform: uppercase; margin: 20px 0;">Authorize New Password</a>
           <p style="font-size: 10px; color: #444; margin-top: 20px;">This link expires in 60 minutes. If you did not request this, secure your account immediately.</p>
         </div>
       `,
@@ -57,12 +71,22 @@ export async function requestPasswordReset(formData: FormData) {
  * Validates token and updates the DB
  */
 export async function resetPassword(formData: FormData) {
+  // Rate limit: 5 reset attempts per minute per IP
+  const rl = await checkActionRateLimit("strict", 5, "resetPassword");
+  if (!rl.success) {
+    throw new Error("Too many attempts. Please try again later.");
+  }
+
   await dbConnect();
   const token = formData.get("token") as string;
   const password = formData.get("password") as string;
   const confirm = formData.get("confirmPassword") as string;
 
   if (password !== confirm) throw new Error("Passwords do not match");
+
+  if (!PASSWORD_REGEX.test(password)) {
+    throw new Error("Password must be at least 8 characters with letters and numbers.");
+  }
 
   const user = await User.findOne({
     resetPasswordToken: token,

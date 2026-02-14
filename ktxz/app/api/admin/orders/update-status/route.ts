@@ -9,46 +9,18 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { Resend } from "resend";
 import { requireAdmin } from "@/lib/requireAdmin";
 import dbConnect from "@/lib/dbConnect";
 import Order from "@/models/Order";
-import Card from "@/models/Card";
 import { generateShippingNotificationEmail } from "@/lib/emails/shippingNotification";
-
-const resend = new Resend(process.env.RESEND_API_KEY);
-const EMAIL_FROM = process.env.EMAIL_FROM || "onboarding@resend.dev";
-const EMAIL_FROM_NAME = process.env.EMAIL_FROM_NAME || "KTXZ SHOP";
-const SITE_URL = process.env.NEXTAUTH_URL || process.env.SITE_URL || "http://localhost:3000";
+import { errorResponse } from "@/lib/apiResponse";
+import { restoreInventory } from "@/lib/inventory";
+import { getResend, EMAIL_FROM, EMAIL_FROM_NAME, SITE_URL } from "@/lib/emailConfig";
 
 const VALID_STATUSES = ["pending", "paid", "fulfilled", "cancelled", "refunded"];
 
 // Statuses where inventory was deducted (paid or fulfilled orders)
 const INVENTORY_DEDUCTED_STATUSES = ["paid", "fulfilled"];
-
-async function restoreInventory(orderItems: Array<{ card: string; quantity: number }>) {
-  for (const item of orderItems) {
-    const card = await Card.findById(item.card);
-    if (!card) continue;
-
-    const inventoryType = card.inventoryType || "single";
-
-    if (inventoryType === "bulk") {
-      card.stock = (card.stock || 0) + item.quantity;
-      if (card.status === "sold") {
-        card.status = "active";
-        card.isActive = true;
-      }
-    } else {
-      // single item — restore to available
-      card.stock = 1;
-      card.status = "active";
-      card.isActive = true;
-    }
-
-    await card.save();
-  }
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -124,7 +96,7 @@ export async function POST(req: NextRequest) {
           SITE_URL
         );
 
-        const result = await resend.emails.send({
+        const result = await getResend().emails.send({
           from: `${EMAIL_FROM_NAME} <${EMAIL_FROM}>`,
           to: order.email,
           subject: `Your Order Has Shipped #${orderNumber} - KTXZ`,
@@ -153,10 +125,6 @@ export async function POST(req: NextRequest) {
       inventoryRestored,
     });
   } catch (error) {
-    console.error("Error updating order status:", error);
-    return NextResponse.json(
-      { error: "Failed to update order status" },
-      { status: 500 }
-    );
+    return errorResponse(error);
   }
 }

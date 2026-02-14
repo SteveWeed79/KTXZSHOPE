@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { isAdminUser } from "@/lib/isAdmin";
 
 /**
  * Shared admin authorization check for API routes.
@@ -18,11 +19,7 @@ export async function requireAdmin() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const userRole = (session.user as { role?: string })?.role;
-  const isAdmin =
-    userRole === "admin" || session.user.email === process.env.ADMIN_EMAIL;
-
-  if (!isAdmin) {
+  if (!isAdminUser(session.user as { email?: string; role?: string })) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

@@ -73,6 +73,9 @@ CardSchema.index({ status: 1, reservedUntil: 1 });
 // Optional: keep singles sane at save-time
 // Mongoose 9+: do NOT use `next()` in pre middleware. :contentReference[oaicite:2]{index=2}
 CardSchema.pre("save", function () {
+  // Never allow negative stock
+  if (this.stock < 0) this.stock = 0;
+
   if (this.inventoryType === "single") {
     if (this.stock > 1) this.stock = 1;
     if (this.status === "sold") this.stock = 0;
