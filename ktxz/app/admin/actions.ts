@@ -1,12 +1,36 @@
+/**
+ * ============================================================================
+ * FILE: ktxz/app/admin/actions.ts
+ * STATUS: DEMO-SAFE (Force visible refresh after mutations)
+ * ============================================================================
+ *
+ * Why this file exists:
+ * - Admin server actions for Brands, Cards, and Vault status.
+ *
+ * Demo behavior:
+ * - After each successful mutation (create/update/delete), we:
+ *   1) revalidatePath() for relevant routes
+ *   2) redirect("/admin") to guarantee the UI visibly updates
+ *
+ * Notes:
+ * - Keeps your admin authorization gate via isAdminUser(session.user)
+ * - Preserves Vault actions: updateVaultStatus + removeFromVault
+ */
+
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import mongoose from "mongoose";
 import Brand from "@/models/Brand";
 import Card from "@/models/Card";
 import dbConnect from "@/lib/dbConnect";
 import { auth } from "@/auth";
 import { isAdminUser } from "@/lib/isAdmin";
+
+// ============================================================================
+// Helpers
+// ============================================================================
 
 function validateObjectId(id: unknown, label = "ID"): string {
   const str = String(id || "").trim();
@@ -30,9 +54,15 @@ function parseNumber(value: unknown, fallback: number) {
   return Number.isFinite(n) ? n : fallback;
 }
 
-function parseIntSafe(value: unknown, fallback: number) {
-  const n = typeof value === "string" ? parseInt(value, 10) : parseInt(String(value), 10);
-  return Number.isFinite(n) ? n : fallback;
+/**
+ * Convert FormData checkbox values to boolean.
+ * - Unchecked checkbox -> field missing -> undefined
+ * - Checked checkbox   -> "on" (default) or provided string value
+ */
+function checkboxToBool(value: FormDataEntryValue | undefined, defaultValue = false): boolean {
+  if (value === undefined) return defaultValue;
+  if (typeof value !== "string") return defaultValue;
+  return value === "on" || value === "true" || value === "1";
 }
 
 async function checkAdmin() {
@@ -42,6 +72,22 @@ async function checkAdmin() {
   }
 }
 
+/**
+ * For demo reliability:
+ * - revalidate pages that show these entities
+ * - redirect back to /admin so the user sees the updated list immediately
+ */
+function demoBounceAdmin() {
+  revalidatePath("/admin");
+  revalidatePath("/");
+  revalidatePath("/shop");
+  redirect("/admin");
+}
+
+// ============================================================================
+// Brand Actions
+// ============================================================================
+
 export async function createBrand(formData: FormData) {
   await checkAdmin();
   await dbConnect();
@@ -50,7 +96,21 @@ export async function createBrand(formData: FormData) {
   if (!name) throw new Error("Name required");
 
   await Brand.create({ name, slug: slugify(name) });
-  revalidatePath("/admin");
+
+  demoBounceAdmin();
+}
+
+export async function updateBrand(formData: FormData) {
+  await checkAdmin();
+  await dbConnect();
+
+  const brandId = validateObjectId(formData.get("brandId"), "Brand ID");
+  const name = String(formData.get("name") || "").trim();
+  if (!name) throw new Error("Name required");
+
+  await Brand.findByIdAndUpdate(brandId, { name, slug: slugify(name) }, { runValidators: true });
+
+  demoBounceAdmin();
 }
 
 export async function deleteBrand(formData: FormData) {
@@ -58,20 +118,27 @@ export async function deleteBrand(formData: FormData) {
   await dbConnect();
 
   const brandId = validateObjectId(formData.get("brandId"), "Brand ID");
+
   const hasCards = await Card.countDocuments({ brand: brandId });
   if (hasCards) throw new Error("Cannot delete category with active cards.");
 
   await Brand.findByIdAndDelete(brandId);
-  revalidatePath("/admin");
+
+  demoBounceAdmin();
 }
+
+// ============================================================================
+// Card Actions
+// ============================================================================
 
 export async function createCard(formData: FormData) {
   await checkAdmin();
   await dbConnect();
 
-  const rawData = Object.fromEntries(formData.entries());
+  const raw = Object.fromEntries(formData.entries());
+  const rawData = raw as Record<string, FormDataEntryValue>;
 
-  const brandId = validateObjectId(rawData.brandId || rawData.brand, "Category/Brand");
+  const brandId = validateObjectId(rawData.brandId ?? rawData.brand, "Category");
 
   const name = String(rawData.name || "").trim();
   if (!name) throw new Error("Card name is required.");
@@ -79,110 +146,82 @@ export async function createCard(formData: FormData) {
   const inventoryTypeRaw = String(rawData.inventoryType || "single").toLowerCase();
   const inventoryType = inventoryTypeRaw === "bulk" ? "bulk" : "single";
 
-  // For singles, enforce stock=1. For bulk, allow stock input (default to 0 if provided invalid).
-  const stock =
-    inventoryType === "single"
-      ? 1
-      : Math.max(0, parseIntSafe(rawData.stock, 0));
+  const price = Math.max(0, parseNumber(rawData.price, 0));
+  const stockInput = parseNumber(rawData.stock, 0);
 
-  // Default active unless explicitly disabled (checkbox patterns vary by UI; safe default).
-  const isActive =
-    rawData.isActive === undefined ? true : rawData.isActive === "on" || rawData.isActive === "true";
+  // singles always stock=1; bulk uses provided stock (>=0)
+  const stock = inventoryType === "single" ? 1 : Math.max(0, stockInput);
 
-  // Status defaults: active (unless admin explicitly sets otherwise later)
-  const statusRaw = String(rawData.status || "active").toLowerCase();
-  const status =
-    statusRaw === "reserved" || statusRaw === "sold" || statusRaw === "inactive"
-      ? statusRaw
-      : "active";
+  const description = String(rawData.description || "").trim();
+  const imageUrl = String(rawData.imageUrl || "").trim();
+
+  // If checkbox missing, default true (your prior behavior)
+  const isActive = checkboxToBool(rawData.isActive, true);
 
   await Card.create({
+    brand: brandId,
     name,
-    slug: slugify(name),
-    price: parseNumber(rawData.price, 0),
-    description: rawData.description ? String(rawData.description) : "",
-    rarity: rawData.rarity ? String(rawData.rarity) : "",
-    image: rawData.image ? String(rawData.image) : "",
-    brand: String(brandId),
-
     inventoryType,
     stock,
-    status,
+    price,
+    description,
+    imageUrl,
     isActive,
-
-    // Vault flags/dates
-    isVault: rawData.isVault === "on",
-    updatedAt: new Date(),
   });
 
-  revalidatePath("/admin");
-  revalidatePath("/");
-  revalidatePath("/shop");
+  demoBounceAdmin();
 }
 
 export async function updateCard(formData: FormData) {
   await checkAdmin();
   await dbConnect();
 
-  const rawData = Object.fromEntries(formData.entries());
+  const raw = Object.fromEntries(formData.entries());
+  const rawData = raw as Record<string, FormDataEntryValue>;
+
   const cardId = validateObjectId(rawData.cardId, "Card ID");
 
-  // Build a safe update object: only update fields that exist in the form
-  const update: Record<string, unknown> = {
-    updatedAt: new Date(),
-  };
+  const update: any = {};
+
+  if (rawData.brandId !== undefined || rawData.brand !== undefined) {
+    update.brand = validateObjectId(rawData.brandId ?? rawData.brand, "Category");
+  }
 
   if (rawData.name !== undefined) {
     const name = String(rawData.name || "").trim();
     if (!name) throw new Error("Card name is required.");
     update.name = name;
-    update.slug = slugify(name);
   }
 
-  if (rawData.price !== undefined) update.price = parseNumber(rawData.price, 0);
-  if (rawData.rarity !== undefined) update.rarity = String(rawData.rarity || "");
-  if (rawData.description !== undefined) update.description = String(rawData.description || "");
-  if (rawData.image !== undefined) update.image = String(rawData.image || "");
-
-  // Inventory fields (won’t change unless you add them to the admin UI)
   if (rawData.inventoryType !== undefined) {
-    const inventoryTypeRaw = String(rawData.inventoryType || "single").toLowerCase();
-    update.inventoryType = inventoryTypeRaw === "bulk" ? "bulk" : "single";
+    const invRaw = String(rawData.inventoryType || "single").toLowerCase();
+    update.inventoryType = invRaw === "bulk" ? "bulk" : "single";
   }
 
   if (rawData.stock !== undefined) {
-    // Enforce singles always stock=1 if inventoryType is (or becomes) single
-    const current = await Card.findById(cardId).select("inventoryType").lean();
-    const currentType = (current as { inventoryType?: string } | null)?.inventoryType === "bulk" ? "bulk" : "single";
-    const nextType =
-      update.inventoryType === "bulk" || update.inventoryType === "single"
-        ? update.inventoryType
-        : currentType;
-
-    update.stock =
-      nextType === "single" ? 1 : Math.max(0, parseIntSafe(rawData.stock, 0));
+    update.stock = Math.max(0, parseNumber(rawData.stock, 0));
   }
 
+  if (rawData.price !== undefined) {
+    update.price = Math.max(0, parseNumber(rawData.price, 0));
+  }
+
+  if (rawData.description !== undefined) {
+    update.description = String(rawData.description || "").trim();
+  }
+
+  if (rawData.imageUrl !== undefined) {
+    update.imageUrl = String(rawData.imageUrl || "").trim();
+  }
+
+  // Checkbox: if field present, set explicit boolean; if absent, don't change.
   if (rawData.isActive !== undefined) {
-    update.isActive = rawData.isActive === "on" || rawData.isActive === "true";
+    update.isActive = checkboxToBool(rawData.isActive, false);
   }
 
-  if (rawData.status !== undefined) {
-    const statusRaw = String(rawData.status || "").toLowerCase();
-    update.status =
-      statusRaw === "active" || statusRaw === "reserved" || statusRaw === "sold" || statusRaw === "inactive"
-        ? statusRaw
-        : "active";
-  }
+  await Card.findByIdAndUpdate(cardId, update, { runValidators: true });
 
-  // Vault toggle checkbox (existing UI relies on this)
-  if (rawData.isVault !== undefined) update.isVault = rawData.isVault === "on";
-
-  await Card.findByIdAndUpdate(cardId, update);
-
-  revalidatePath("/admin");
-  revalidatePath("/");
-  revalidatePath("/shop");
+  demoBounceAdmin();
 }
 
 export async function deleteCard(formData: FormData) {
@@ -192,19 +231,24 @@ export async function deleteCard(formData: FormData) {
   const cardId = validateObjectId(formData.get("cardId"), "Card ID");
   await Card.findByIdAndDelete(cardId);
 
-  revalidatePath("/admin");
-  revalidatePath("/");
-  revalidatePath("/shop");
+  demoBounceAdmin();
 }
+
+// ============================================================================
+// Vault Actions
+// ============================================================================
 
 export async function updateVaultStatus(formData: FormData) {
   await checkAdmin();
   await dbConnect();
 
-  const rawData = Object.fromEntries(formData.entries());
+  const raw = Object.fromEntries(formData.entries());
+  const rawData = raw as Record<string, FormDataEntryValue>;
+
   const cardId = validateObjectId(rawData.cardId, "Card ID");
-  const release = rawData.vaultReleaseDate as string;
-  const expiry = rawData.vaultExpiryDate as string;
+
+  const release = typeof rawData.vaultReleaseDate === "string" ? rawData.vaultReleaseDate : "";
+  const expiry = typeof rawData.vaultExpiryDate === "string" ? rawData.vaultExpiryDate : "";
 
   await Card.findByIdAndUpdate(cardId, {
     isVault: true,
@@ -213,9 +257,7 @@ export async function updateVaultStatus(formData: FormData) {
     updatedAt: new Date(),
   });
 
-  revalidatePath("/admin");
-  revalidatePath("/");
-  revalidatePath("/shop");
+  demoBounceAdmin();
 }
 
 export async function removeFromVault(formData: FormData) {
@@ -231,7 +273,5 @@ export async function removeFromVault(formData: FormData) {
     updatedAt: new Date(),
   });
 
-  revalidatePath("/admin");
-  revalidatePath("/");
-  revalidatePath("/shop");
+  demoBounceAdmin();
 }

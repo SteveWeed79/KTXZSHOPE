@@ -1,3 +1,22 @@
+/**
+ * ============================================================================
+ * FILE: ktxz/components/Navbar.tsx
+ * STATUS: DEMO-SAFE (prevents stale session/brand UI)
+ * ============================================================================
+ *
+ * Change requested:
+ * - Brand list in the Navbar should be information-only (NOT clickable)
+ * - Remove the “circle/pill” look; just stylize the font cleanly.
+ *
+ * What changed:
+ * - Replaced pill styling (border/rounded/bg/padding) with simple typographic styling.
+ * - Added subtle separators for readability.
+ *
+ * What did NOT change:
+ * - Session / Admin logic stays intact.
+ * - noStore() remains to keep Navbar fresh for demo.
+ */
+
 import Link from "next/link";
 import { auth, signOut } from "@/auth";
 import SearchBar from "@/components/SearchBar";
@@ -6,8 +25,12 @@ import Brand from "@/models/Brand";
 import dbConnect from "@/lib/dbConnect";
 import { Suspense } from "react";
 import { ShoppingBag } from "lucide-react";
+import { unstable_noStore as noStore } from "next/cache";
 
 export default async function Navbar() {
+  // Demo-safe: Navbar depends on session + DB; don’t allow stale cache renders.
+  noStore();
+
   const session = await auth();
   await dbConnect();
   const brands = await Brand.find({}).lean();
@@ -19,7 +42,7 @@ export default async function Navbar() {
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-border bg-background/80 backdrop-blur-md">
       <div className="max-w-7xl mx-auto flex h-14 items-center px-4">
-        {/* LEFT: Logo + Brand Links */}
+        {/* LEFT: Logo + Brand List (info-only, typography only) */}
         <div className="flex items-center gap-6 mr-auto">
           <Link
             href="/"
@@ -31,43 +54,37 @@ export default async function Navbar() {
           {isAdmin && (
             <Link
               href="/admin"
-              className="text-[9px] text-primary font-bold border border-primary/30 px-2 py-0.5 rounded hover:bg-primary hover:text-primary-foreground transition-all tracking-wide uppercase shrink-0"
+              className="text-[9px] font-semibold tracking-[0.3em] uppercase text-primary/90 hover:text-primary transition-colors"
             >
               Admin
             </Link>
           )}
 
-          <div className="hidden xl:block h-4 w-px bg-border" />
-
-          <div className="hidden xl:flex items-center gap-1">
-            {brands.map((brand: { _id: { toString(): string }; slug: string; name: string }) => (
-              <Link
-                key={brand._id.toString()}
-                href={`/menu/${brand.slug}`}
-                className="text-[11px] font-semibold tracking-wide uppercase text-muted-foreground hover:text-foreground hover:bg-muted px-3 py-1.5 rounded-md transition-colors"
-              >
-                {brand.name}
-              </Link>
-            ))}
-            <Link
-              href="/shop"
-              className="text-[11px] font-semibold tracking-wide uppercase text-muted-foreground hover:text-foreground hover:bg-muted px-3 py-1.5 rounded-md transition-colors"
-            >
-              Store
-            </Link>
+          <div className="hidden md:flex items-center gap-2 text-[11px] tracking-[0.22em] uppercase text-muted-foreground">
+            {brands.length === 0 ? (
+              <span className="tracking-normal uppercase text-xs">No brands yet</span>
+            ) : (
+              brands.map((b: any, idx: number) => (
+                <span key={String(b._id)} className="whitespace-nowrap">
+                  <span className="hover:text-foreground transition-colors">{b.name}</span>
+                  {idx < brands.length - 1 && (
+                    <span className="mx-2 text-border/80">•</span>
+                  )}
+                </span>
+              ))
+            )}
           </div>
         </div>
 
-        {/* RIGHT: Search + Actions */}
-        <div className="flex items-center gap-3 ml-auto">
-          <Suspense
-            fallback={<div className="w-[220px] h-8 bg-muted animate-pulse rounded-full" />}
-          >
+        {/* CENTER: Search */}
+        <div className="hidden lg:flex w-[420px]">
+          <Suspense fallback={null}>
             <SearchBar />
           </Suspense>
+        </div>
 
-          <div className="h-4 w-px bg-border hidden sm:block" />
-
+        {/* RIGHT: Actions */}
+        <div className="flex items-center gap-3 ml-auto">
           <ThemeToggle />
 
           <Link

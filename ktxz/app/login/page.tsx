@@ -1,15 +1,46 @@
+/**
+ * ============================================================================
+ * FILE: ktxz/app/login/page.tsx
+ * STATUS: DEMO-SAFE (forces session UI to update immediately)
+ * ============================================================================
+ *
+ * Problem:
+ * - Credentials login uses `redirect: false` + client navigation.
+ * - In App Router, that can leave server-rendered layout/navbar stale until a
+ *   manual refresh, so the Sign In/Out button and Admin link appear “stuck”.
+ *
+ * Fix:
+ * - After successful credentials login (and post-signup auto-login), we do:
+ *     router.replace(nextUrl)
+ *     router.refresh()
+ *   This forces a re-render of the server tree so Navbar reflects the new session.
+ *
+ * What did NOT change:
+ * - No UI removal.
+ * - No provider removal.
+ * - OAuth continues to use callbackUrl (respects ?next=).
+ */
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { signIn } from "next-auth/react";
 import { signUp } from "./userActions";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 type ProviderMap = Record<string, { id: string; name: string; type: string }>;
 
 export default function AuthPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const nextUrl = useMemo(() => {
+    const n = searchParams.get("next");
+    if (!n || typeof n !== "string") return "/";
+    if (!n.startsWith("/")) return "/";
+    return n;
+  }, [searchParams]);
 
   const [isLogin, setIsLogin] = useState(true);
   const [error, setError] = useState("");
@@ -37,7 +68,9 @@ export default function AuthPage() {
       }
     }
     loadProviders();
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, []);
 
   const hasGoogle = !!providers?.google;
@@ -58,16 +91,37 @@ export default function AuthPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
+
     const formData = new FormData(e.currentTarget);
     const email = String(formData.get("email") || "");
     const pass = String(formData.get("password") || "");
+
     const result = await signUp(formData);
-    if ((result as any)?.error) { setError((result as any).error); setLoading(false); return; }
-    if ((result as any)?.success) {
-      const loginResult = await signIn("credentials", { email, password: pass, redirect: false });
-      if (loginResult?.error) { setIsLogin(true); setError("Account created! Please sign in manually."); }
-      else { router.push("/"); }
+    if ((result as any)?.error) {
+      setError((result as any).error);
+      setLoading(false);
+      return;
     }
+
+    if ((result as any)?.success) {
+      const loginResult = await signIn("credentials", {
+        email,
+        password: pass,
+        redirect: false,
+      });
+
+      if (loginResult?.error) {
+        setIsLogin(true);
+        setError("Account created! Please sign in manually.");
+        setLoading(false);
+        return;
+      }
+
+      router.replace(nextUrl);
+      router.refresh();
+      return;
+    }
+
     setLoading(false);
   };
 
@@ -78,9 +132,7 @@ export default function AuthPage() {
     <main className="min-h-screen flex items-center justify-center p-6">
       <div className="w-full max-w-md bg-card p-8 rounded-2xl border border-border">
         <div className="mb-8">
-          <h1 className="text-3xl brand-heading">
-            {isLogin ? "Sign In" : "Create Account"}
-          </h1>
+          <h1 className="text-3xl brand-heading">{isLogin ? "Sign In" : "Create Account"}</h1>
           <p className="text-muted-foreground text-sm mt-1">
             {isLogin ? "Enter your credentials to continue." : "Set up your new account."}
           </p>
@@ -98,29 +150,48 @@ export default function AuthPage() {
               e.preventDefault();
               setLoading(true);
               setError("");
+
               const formData = new FormData(e.currentTarget);
               const email = String(formData.get("email") || "");
               const password = String(formData.get("password") || "");
-              const result = await signIn("credentials", { email, password, redirect: false });
-              if (result?.error) { setError("Invalid Credentials"); setLoading(false); }
-              else { router.push("/"); }
+
+              const result = await signIn("credentials", {
+                email,
+                password,
+                redirect: false,
+              });
+
+              if (result?.error) {
+                setError("Invalid Credentials");
+                setLoading(false);
+                return;
+              }
+
+              router.replace(nextUrl);
+              router.refresh();
             }}
             className="space-y-4"
           >
             <input name="email" type="email" placeholder="Email" required className={inputClass} />
             <div className="space-y-2">
-              <input name="password" type="password" placeholder="Password" required className={inputClass} />
+              <input
+                name="password"
+                type="password"
+                placeholder="Password"
+                required
+                className={inputClass}
+              />
               <div className="text-right px-1">
-                <Link href="/forgot-password" className="text-xs text-muted-foreground hover:text-primary transition-colors">
+                <Link
+                  href="/forgot-password"
+                  className="text-xs text-muted-foreground hover:text-primary transition-colors"
+                >
                   Forgot Password?
                 </Link>
               </div>
             </div>
 
-            <button
-              disabled={loading}
-              className="w-full btn-primary py-4 disabled:opacity-50"
-            >
+            <button disabled={loading} className="w-full btn-primary py-4 disabled:opacity-50">
               {loading ? "Signing in..." : "Sign In"}
             </button>
 
@@ -135,7 +206,12 @@ export default function AuthPage() {
                 <button
                   type="button"
                   disabled={loading}
-                  onClick={async () => { setError(""); setLoading(true); await signIn("google", { callbackUrl: "/" }); setLoading(false); }}
+                  onClick={async () => {
+                    setError("");
+                    setLoading(true);
+                    await signIn("google", { callbackUrl: nextUrl });
+                    setLoading(false);
+                  }}
                   className="w-full border border-border bg-background text-foreground font-bold py-4 rounded-xl hover:border-primary transition-all uppercase text-xs tracking-widest disabled:opacity-50"
                 >
                   Continue with Google
@@ -146,15 +222,30 @@ export default function AuthPage() {
         ) : (
           <form onSubmit={handleRegister} className="space-y-4">
             <input name="name" type="text" placeholder="Full Name" required className={inputClass} />
-            <input name="email" type="email" placeholder="Email Address" required className={inputClass} />
             <input
-              name="password" type="password" placeholder="Password" required
-              onChange={(e) => setPassword(e.target.value)} className={inputClass}
+              name="email"
+              type="email"
+              placeholder="Email Address"
+              required
+              className={inputClass}
             />
             <input
-              name="confirmPassword" type="password" placeholder="Confirm Password" required
+              name="password"
+              type="password"
+              placeholder="Password"
+              required
+              onChange={(e) => setPassword(e.target.value)}
+              className={inputClass}
+            />
+            <input
+              name="confirmPassword"
+              type="password"
+              placeholder="Confirm Password"
+              required
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className={`${inputClass} ${confirmPassword && !validation.matches ? "!border-primary" : ""}`}
+              className={`${inputClass} ${
+                confirmPassword && !validation.matches ? "!border-primary" : ""
+              }`}
             />
 
             <div className="text-xs space-y-2 text-muted-foreground">
@@ -182,7 +273,10 @@ export default function AuthPage() {
 
         <div className="mt-8 border-t border-border pt-6">
           <button
-            onClick={() => { setIsLogin(!isLogin); setError(""); }}
+            onClick={() => {
+              setIsLogin(!isLogin);
+              setError("");
+            }}
             className="w-full text-muted-foreground text-sm hover:text-foreground font-medium transition-colors"
           >
             {isLogin ? "New here? Create an account" : "Already have an account? Sign in"}
