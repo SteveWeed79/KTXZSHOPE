@@ -153,7 +153,8 @@ export async function createCard(formData: FormData) {
   const stock = inventoryType === "single" ? 1 : Math.max(0, stockInput);
 
   const description = String(rawData.description || "").trim();
-  const imageUrl = String(rawData.imageUrl || "").trim();
+  const image = String(rawData.image || rawData.imageUrl || "").trim();
+  const rarity = String(rawData.rarity || "").trim();
 
   // If checkbox missing, default true (your prior behavior)
   const isActive = checkboxToBool(rawData.isActive, true);
@@ -165,7 +166,8 @@ export async function createCard(formData: FormData) {
     stock,
     price,
     description,
-    imageUrl,
+    image,
+    rarity,
     isActive,
   });
 
@@ -206,12 +208,16 @@ export async function updateCard(formData: FormData) {
     update.price = Math.max(0, parseNumber(rawData.price, 0));
   }
 
+  if (rawData.rarity !== undefined) {
+    update.rarity = String(rawData.rarity || "").trim();
+  }
+
   if (rawData.description !== undefined) {
     update.description = String(rawData.description || "").trim();
   }
 
-  if (rawData.imageUrl !== undefined) {
-    update.imageUrl = String(rawData.imageUrl || "").trim();
+  if (rawData.image !== undefined || rawData.imageUrl !== undefined) {
+    update.image = String(rawData.image || rawData.imageUrl || "").trim();
   }
 
   // Checkbox: if field present, set explicit boolean; if absent, don't change.

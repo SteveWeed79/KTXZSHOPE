@@ -1,24 +1,11 @@
 /**
  * ============================================================================
  * FILE: ktxz/app/login/page.tsx
- * STATUS: DEMO-SAFE (forces session UI to update immediately)
  * ============================================================================
  *
- * Problem:
- * - Credentials login uses `redirect: false` + client navigation.
- * - In App Router, that can leave server-rendered layout/navbar stale until a
- *   manual refresh, so the Sign In/Out button and Admin link appear “stuck”.
- *
- * Fix:
- * - After successful credentials login (and post-signup auto-login), we do:
- *     router.replace(nextUrl)
- *     router.refresh()
- *   This forces a re-render of the server tree so Navbar reflects the new session.
- *
- * What did NOT change:
- * - No UI removal.
- * - No provider removal.
- * - OAuth continues to use callbackUrl (respects ?next=).
+ * Fix: After credentials login, use window.location.href for a hard navigation.
+ * This guarantees the server tree (including Navbar session state) is fully
+ * re-rendered from scratch, eliminating stale session UI.
  */
 
 "use client";
@@ -27,18 +14,18 @@ import { useEffect, useMemo, useState } from "react";
 import { signIn } from "next-auth/react";
 import { signUp } from "./userActions";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 
 type ProviderMap = Record<string, { id: string; name: string; type: string }>;
 
 export default function AuthPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   const nextUrl = useMemo(() => {
     const n = searchParams.get("next");
     if (!n || typeof n !== "string") return "/";
-    if (!n.startsWith("/")) return "/";
+    // Must start with / but not // (protocol-relative URL = open redirect)
+    if (!n.startsWith("/") || n.startsWith("//")) return "/";
     return n;
   }, [searchParams]);
 
@@ -87,6 +74,14 @@ export default function AuthPage() {
     isLogin ||
     (validation.hasLetter && validation.hasNumber && validation.hasLength && validation.matches);
 
+  /**
+   * Hard navigate after login. window.location.href forces a full page load,
+   * which guarantees the server-rendered Navbar picks up the new session.
+   */
+  function navigateAfterLogin(url: string) {
+    window.location.href = url;
+  }
+
   const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
@@ -117,8 +112,7 @@ export default function AuthPage() {
         return;
       }
 
-      router.replace(nextUrl);
-      router.refresh();
+      navigateAfterLogin(nextUrl);
       return;
     }
 
@@ -167,8 +161,7 @@ export default function AuthPage() {
                 return;
               }
 
-              router.replace(nextUrl);
-              router.refresh();
+              navigateAfterLogin(nextUrl);
             }}
             className="space-y-4"
           >

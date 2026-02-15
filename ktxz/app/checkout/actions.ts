@@ -240,8 +240,18 @@ export async function createCheckoutSession() {
     );
 
     if (!checkoutSession.url) throw new Error("Stripe did not return a checkout URL.");
-    redirect(checkoutSession.url);
-  } catch (e) {
+
+    // Store the URL before redirecting so we can redirect outside the try-catch.
+    // Next.js redirect() throws a special NEXT_REDIRECT error that must NOT be caught.
+    const stripeUrl = checkoutSession.url;
+    redirect(stripeUrl);
+  } catch (e: any) {
+    // Next.js redirect() works by throwing. Don't cancel the reservation for redirects.
+    const isRedirect =
+      e?.digest?.startsWith?.("NEXT_REDIRECT") || e?.message === "NEXT_REDIRECT";
+    if (isRedirect) throw e;
+
+    // Only cancel reservation for actual errors (Stripe API failure, etc.)
     await Reservation.updateOne({ _id: reservation._id }, { $set: { status: "cancelled" } });
     throw e;
   }

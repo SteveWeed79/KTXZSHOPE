@@ -220,6 +220,37 @@ export default async function AdminPage() {
                 className="bg-background border border-border p-4 rounded-xl text-foreground outline-none focus:ring-1 focus:ring-primary transition-all placeholder:text-muted-foreground"
               />
             </div>
+
+            {/* Inventory Type & Stock */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-[9px] text-muted-foreground uppercase font-mono ml-1 block">
+                  Inventory Type
+                </label>
+                <select
+                  name="inventoryType"
+                  defaultValue="single"
+                  className="w-full bg-background border border-border p-4 rounded-xl text-foreground outline-none focus:ring-1 focus:ring-primary uppercase text-xs font-bold"
+                >
+                  <option value="single">Single</option>
+                  <option value="bulk">Bulk</option>
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[9px] text-muted-foreground uppercase font-mono ml-1 block">
+                  Stock Quantity
+                </label>
+                <input
+                  name="stock"
+                  type="number"
+                  min="0"
+                  defaultValue={1}
+                  placeholder="Stock (1 for single)"
+                  className="w-full bg-background border border-border p-4 rounded-xl text-foreground outline-none focus:ring-1 focus:ring-primary transition-all placeholder:text-muted-foreground"
+                />
+              </div>
+            </div>
+
             <textarea
               name="description"
               placeholder="Card description"
@@ -425,6 +456,51 @@ export default async function AdminPage() {
                         defaultValue={card.image || ""}
                         className="w-full bg-muted/30 border border-border p-2 rounded-lg text-[10px] text-muted-foreground outline-none focus:ring-1 focus:ring-primary"
                       />
+                    </div>
+                  </div>
+
+                  {/* Inventory Type & Stock Row */}
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[8px] text-muted-foreground uppercase font-mono ml-1">
+                        Inventory Type
+                      </label>
+                      <select
+                        name="inventoryType"
+                        defaultValue={card.inventoryType || "single"}
+                        className="w-full bg-muted/30 border border-border p-2 rounded-lg text-xs text-foreground outline-none focus:ring-1 focus:ring-primary uppercase font-bold"
+                      >
+                        <option value="single">Single</option>
+                        <option value="bulk">Bulk</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[8px] text-muted-foreground uppercase font-mono ml-1">
+                        Stock
+                      </label>
+                      <input
+                        name="stock"
+                        type="number"
+                        min="0"
+                        defaultValue={card.stock ?? 1}
+                        className="w-full bg-muted/30 border border-border p-2 rounded-lg text-xs text-foreground outline-none focus:ring-1 focus:ring-primary"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[8px] text-muted-foreground uppercase font-mono ml-1">
+                        Status
+                      </label>
+                      <span className="block p-2 text-xs text-muted-foreground uppercase font-mono">
+                        {card.status || "active"}
+                      </span>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[8px] text-muted-foreground uppercase font-mono ml-1">
+                        Active
+                      </label>
+                      <span className="block p-2 text-xs text-muted-foreground uppercase font-mono">
+                        {card.isActive !== false ? "Yes" : "No"}
+                      </span>
                     </div>
                   </div>
 

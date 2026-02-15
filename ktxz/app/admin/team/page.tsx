@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Shield, ShieldOff, Search, Users, Crown } from "lucide-react";
+import { Shield, ShieldOff, Search, Users, Crown, UserPlus } from "lucide-react";
 
 interface UserEntry {
   _id: string;
@@ -20,6 +20,12 @@ export default function AdminTeamPage() {
   const [searching, setSearching] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // Create admin form state
+  const [newAdminName, setNewAdminName] = useState("");
+  const [newAdminEmail, setNewAdminEmail] = useState("");
+  const [newAdminPassword, setNewAdminPassword] = useState("");
+  const [creating, setCreating] = useState(false);
 
   const fetchAdmins = useCallback(async () => {
     try {
@@ -76,7 +82,6 @@ export default function AdminTeamPage() {
         type: "success",
       });
       await fetchAdmins();
-      // Clear from search results if promoted
       if (newRole === "admin") {
         setSearchResults((prev) => prev.filter((u) => u._id !== userId));
       }
@@ -87,6 +92,40 @@ export default function AdminTeamPage() {
       });
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  const handleCreateAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreating(true);
+    setMessage(null);
+
+    try {
+      const res = await fetch("/api/admin/users/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newAdminName.trim(),
+          email: newAdminEmail.trim(),
+          password: newAdminPassword,
+          role: "admin",
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to create admin");
+
+      setMessage({ text: `Admin account created for ${newAdminEmail.trim()}.`, type: "success" });
+      setNewAdminName("");
+      setNewAdminEmail("");
+      setNewAdminPassword("");
+      await fetchAdmins();
+    } catch (err) {
+      setMessage({
+        text: err instanceof Error ? err.message : "Failed to create admin.",
+        type: "error",
+      });
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -181,10 +220,55 @@ export default function AdminTeamPage() {
         </div>
       </section>
 
-      {/* Add New Admin */}
+      {/* Create New Admin Account */}
       <section className="bg-card border border-border rounded-2xl p-6 space-y-4">
         <h2 className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2">
-          <Users className="h-4 w-4" /> Add Admin
+          <UserPlus className="h-4 w-4" /> Create New Admin
+        </h2>
+        <p className="text-xs text-muted-foreground">
+          Create a brand new admin account with email and temporary password.
+        </p>
+
+        <form onSubmit={handleCreateAdmin} className="space-y-3">
+          <input
+            type="text"
+            placeholder="Name"
+            value={newAdminName}
+            onChange={(e) => setNewAdminName(e.target.value)}
+            className="w-full bg-background border border-border p-3 rounded-xl text-sm text-foreground outline-none focus:ring-1 focus:ring-primary transition-all placeholder:text-muted-foreground"
+          />
+          <input
+            type="email"
+            placeholder="Email address"
+            required
+            value={newAdminEmail}
+            onChange={(e) => setNewAdminEmail(e.target.value)}
+            className="w-full bg-background border border-border p-3 rounded-xl text-sm text-foreground outline-none focus:ring-1 focus:ring-primary transition-all placeholder:text-muted-foreground"
+          />
+          <input
+            type="password"
+            placeholder="Temporary password (min 8 characters)"
+            required
+            minLength={8}
+            value={newAdminPassword}
+            onChange={(e) => setNewAdminPassword(e.target.value)}
+            className="w-full bg-background border border-border p-3 rounded-xl text-sm text-foreground outline-none focus:ring-1 focus:ring-primary transition-all placeholder:text-muted-foreground"
+          />
+          <button
+            type="submit"
+            disabled={creating || !newAdminEmail.trim() || newAdminPassword.length < 8}
+            className="w-full py-3 bg-primary text-primary-foreground font-bold rounded-xl hover:brightness-90 transition-all uppercase text-xs tracking-wide disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            <UserPlus className="h-4 w-4" />
+            {creating ? "Creating..." : "Create Admin Account"}
+          </button>
+        </form>
+      </section>
+
+      {/* Promote Existing Customer */}
+      <section className="bg-card border border-border rounded-2xl p-6 space-y-4">
+        <h2 className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2">
+          <Users className="h-4 w-4" /> Promote Existing Customer
         </h2>
         <p className="text-xs text-muted-foreground">
           Search for an existing customer account to promote to admin.
@@ -263,7 +347,7 @@ export default function AdminTeamPage() {
 
         {searchQuery.trim() && !searching && searchResults.length === 0 && (
           <p className="text-sm text-muted-foreground text-center py-4">
-            No customers found matching &quot;{searchQuery}&quot;. The user must have an existing account first.
+            No customers found matching &quot;{searchQuery}&quot;. Use the form above to create a new admin account instead.
           </p>
         )}
       </section>
