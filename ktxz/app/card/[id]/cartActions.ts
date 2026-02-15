@@ -1,16 +1,3 @@
-/**
- * ============================================================================
- * FILE: ktxz/app/card/[id]/cartActions.ts
- * STATUS: MODIFIED (Database cart support with proper increment logic)
- * ============================================================================
- * 
- * Add to cart action with database support for logged-in users
- * 
- * IMPORTANT: Handles increment logic properly:
- * - Singles: Always qty 1 (even if clicked multiple times)
- * - Bulk: Increments by 1 each click (capped at stock)
- */
-
 "use server";
 
 import dbConnect from "@/lib/dbConnect";
@@ -49,19 +36,25 @@ export async function addToCart(formData: FormData) {
   // Get current quantity in cart
   const currentQty = await getCartItemQuantity(userId, cardId);
 
+  // Check if user specified a quantity via the form (for bulk items)
+  const formQty = formData.get("quantity");
+  const requestedQty = formQty ? Math.max(1, Math.floor(Number(formQty))) : null;
+
   let newQty: number;
 
   if (!isBulk) {
     // Singles: always 1
     newQty = 1;
+  } else if (requestedQty !== null) {
+    // Bulk with explicit quantity from form: set to that quantity, capped at stock
+    newQty = Math.min(requestedQty, stock);
   } else {
-    // Bulk: increment by 1, capped at stock
+    // Bulk without explicit quantity: increment by 1, capped at stock
     const nextQty = currentQty + 1;
     newQty = Math.min(nextQty, stock);
   }
 
-  // Set the new quantity
   await setCartItemQuantity(userId, cardId, newQty);
 
-  redirect("/shop");
+  redirect("/cart");
 }

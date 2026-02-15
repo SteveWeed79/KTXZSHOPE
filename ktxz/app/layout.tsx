@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 import ThemeProvider from "@/components/ThemeProvider";
 import { Toaster } from "sonner";
 
@@ -16,10 +17,11 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased bg-background text-foreground`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased bg-background text-foreground min-h-screen flex flex-col`}>
         <ThemeProvider>
           <Navbar />
-          {children}
+          <div className="flex-1">{children}</div>
+          <Footer />
           <Toaster position="bottom-right" richColors />
         </ThemeProvider>
       </body>

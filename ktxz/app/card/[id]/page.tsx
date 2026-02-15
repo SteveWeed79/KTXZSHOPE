@@ -86,6 +86,24 @@ export default async function CardPage({
             {canBuy ? (
               <form action={addToCart}>
                 <input type="hidden" name="cardId" value={card._id.toString()} />
+                {isBulk && stock > 1 && (
+                  <div className="flex items-center gap-3 mb-4">
+                    <label className="text-xs uppercase font-mono tracking-wide text-muted-foreground">
+                      Quantity
+                    </label>
+                    <input
+                      name="quantity"
+                      type="number"
+                      min={1}
+                      max={stock}
+                      defaultValue={1}
+                      className="w-24 bg-background border border-border p-3 rounded-xl text-foreground font-mono text-center outline-none focus:ring-1 focus:ring-primary"
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      of {stock} available
+                    </span>
+                  </div>
+                )}
                 <button className="w-full btn-primary py-4 text-lg flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.98] shadow-lg shadow-primary/20">
                   <ShoppingCart className="h-5 w-5" />
                   Add to Cart
