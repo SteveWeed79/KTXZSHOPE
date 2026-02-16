@@ -19,7 +19,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const adminResult = await requireAdmin();
+    const adminResult = await requireAdmin(req, { limit: 30, limiter: "generous" });
     if (adminResult instanceof NextResponse) return adminResult;
 
     const { id } = await params;

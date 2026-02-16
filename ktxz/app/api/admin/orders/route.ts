@@ -19,7 +19,7 @@ const DEFAULT_LIMIT = 50;
 
 export async function GET(req: NextRequest) {
   try {
-    const adminResult = await requireAdmin();
+    const adminResult = await requireAdmin(req, { limit: 30, limiter: "generous" });
     if (adminResult instanceof NextResponse) return adminResult;
 
     await dbConnect();

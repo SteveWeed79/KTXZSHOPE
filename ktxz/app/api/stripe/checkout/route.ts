@@ -14,6 +14,32 @@ const RESERVATION_TTL_MINUTES = 30;
 
 export const runtime = "nodejs";
 
+/**
+ * Roll back atomically reserved stock if checkout fails partway through.
+ * Restores stock for items that were already decremented.
+ */
+async function rollbackReservedStock(
+  reserved: Array<{ cardId: string; qty: number; inventoryType: string }>
+) {
+  for (const item of reserved) {
+    try {
+      if (item.inventoryType === "single") {
+        await Card.findOneAndUpdate(
+          { _id: item.cardId, status: "reserved" },
+          { $set: { status: "active" }, $inc: { stock: 1 } }
+        );
+      } else {
+        await Card.findOneAndUpdate(
+          { _id: item.cardId, inventoryType: "bulk" },
+          { $inc: { stock: item.qty } }
+        );
+      }
+    } catch (err) {
+      console.error(`Failed to rollback stock for card ${item.cardId}:`, err);
+    }
+  }
+}
+
 type CheckoutBody = {
   items: Array<{
     cardId: string;
@@ -44,44 +70,123 @@ export async function POST(req: Request) {
 
     await dbConnect();
 
-    // Load cards & validate availability
+    // ---------------------------------------------------------------
+    // ATOMIC INVENTORY RESERVATION
+    //
+    // To prevent overselling, we atomically decrement stock at
+    // checkout time using findOneAndUpdate with stock guards.
+    // If checkout fails or the reservation expires, stock is restored.
+    // ---------------------------------------------------------------
     const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
     const reservationItems: Array<{ card: mongoose.Types.ObjectId; quantity: number }> = [];
+    // Track items we've already reserved so we can roll back on failure
+    const reservedCards: Array<{ cardId: string; qty: number; inventoryType: string }> = [];
 
-    for (const item of body.items) {
-      const cardId = (item.cardId || "").trim();
-      const qty = Math.min(99, Math.max(1, Number(item.quantity || 1)));
+    try {
+      for (const item of body.items) {
+        const cardId = (item.cardId || "").trim();
+        const qty = Math.min(99, Math.max(1, Number(item.quantity || 1)));
 
-      if (!cardId || !mongoose.Types.ObjectId.isValid(cardId)) {
-        return NextResponse.json(
-          { error: "Invalid cart item (missing or malformed cardId)." },
-          { status: 400 }
+        if (!cardId || !mongoose.Types.ObjectId.isValid(cardId)) {
+          throw Object.assign(
+            new Error("Invalid cart item (missing or malformed cardId)."),
+            { statusCode: 400 }
+          );
+        }
+
+        // For single items: atomically claim the card by setting status to "reserved"
+        // For bulk items: atomically decrement stock with a guard
+        const card = await Card.findById(cardId).populate("brand");
+        if (!card) {
+          throw Object.assign(new Error(`Card not found: ${cardId}`), { statusCode: 404 });
+        }
+
+        const inventoryType = (card as any).inventoryType || "single";
+
+        if (inventoryType === "single") {
+          // Atomically reserve a single card — only succeeds if active + stock >= 1
+          const reserved = await Card.findOneAndUpdate(
+            {
+              _id: cardId,
+              status: "active",
+              isActive: true,
+              stock: { $gte: 1 },
+            },
+            {
+              $set: { status: "reserved" },
+              $inc: { stock: -1 },
+            },
+            { new: true }
+          );
+
+          if (!reserved) {
+            throw Object.assign(
+              new Error(`Item unavailable (already sold or reserved): ${card.name}`),
+              { statusCode: 409 }
+            );
+          }
+
+          reservedCards.push({ cardId, qty: 1, inventoryType: "single" });
+
+          const unitPriceCents = toCents(Number(card.price));
+          lineItems.push({
+            quantity: 1,
+            price_data: {
+              currency: "usd",
+              unit_amount: unitPriceCents,
+              product_data: {
+                name: String(card.name),
+                images: card.image ? [String(card.image)] : [],
+                metadata: {
+                  cardId: String(card._id),
+                  brand: String((card as any).brand?.name || ""),
+                  rarity: String((card as any).rarity || ""),
+                  inventoryType: "single",
+                },
+              },
+            },
+          });
+          reservationItems.push({ card: card._id, quantity: 1 });
+          continue;
+        }
+
+        // Bulk: atomically decrement stock with guard
+        const reserved = await Card.findOneAndUpdate(
+          {
+            _id: cardId,
+            inventoryType: "bulk",
+            status: "active",
+            isActive: true,
+            stock: { $gte: qty },
+          },
+          {
+            $inc: { stock: -qty },
+          },
+          { new: true }
         );
-      }
 
-      const card = await Card.findById(cardId).populate("brand");
-      if (!card) {
-        return NextResponse.json({ error: `Card not found: ${cardId}` }, { status: 404 });
-      }
+        if (!reserved) {
+          // Re-read to give a helpful error message
+          const current = await Card.findById(cardId).select("stock name status isActive").lean() as any;
+          if (!current || current.status === "sold" || !current.isActive) {
+            throw Object.assign(
+              new Error(`Item unavailable: ${card.name}`),
+              { statusCode: 409 }
+            );
+          }
+          throw Object.assign(
+            new Error(
+              `Not enough stock for ${card.name}. Requested ${qty}, available ${current.stock ?? 0}.`
+            ),
+            { statusCode: 409 }
+          );
+        }
 
-      // Sold / inactive protection (your schema updates)
-      const isActive = (card as any).isActive ?? true;
-      const status = (card as any).status ?? "active";
+        reservedCards.push({ cardId, qty, inventoryType: "bulk" });
 
-      if (!isActive || status === "sold") {
-        return NextResponse.json(
-          { error: `Item unavailable (already sold): ${card.name}` },
-          { status: 409 }
-        );
-      }
-
-      const inventoryType = (card as any).inventoryType || "single"; // single | bulk
-
-      if (inventoryType === "single") {
-        // force quantity = 1 for singles
         const unitPriceCents = toCents(Number(card.price));
         lineItems.push({
-          quantity: 1,
+          quantity: qty,
           price_data: {
             currency: "usd",
             unit_amount: unitPriceCents,
@@ -92,54 +197,26 @@ export async function POST(req: Request) {
                 cardId: String(card._id),
                 brand: String((card as any).brand?.name || ""),
                 rarity: String((card as any).rarity || ""),
-                inventoryType: "single",
+                inventoryType: "bulk",
               },
             },
           },
         });
-        reservationItems.push({ card: card._id, quantity: 1 });
-        continue;
+        reservationItems.push({ card: card._id, quantity: qty });
       }
-
-      // bulk
-      const stock = typeof (card as any).stock === "number" ? (card as any).stock : 0;
-      if (stock <= 0) {
+    } catch (reserveErr: any) {
+      // Roll back any stock we already reserved for earlier items
+      await rollbackReservedStock(reservedCards);
+      if (reserveErr.statusCode) {
         return NextResponse.json(
-          { error: `Item out of stock: ${card.name}` },
-          { status: 409 }
+          { error: reserveErr.message },
+          { status: reserveErr.statusCode }
         );
       }
-      if (qty > stock) {
-        return NextResponse.json(
-          {
-            error: `Not enough stock for ${card.name}. Requested ${qty}, available ${stock}.`,
-          },
-          { status: 409 }
-        );
-      }
-
-      const unitPriceCents = toCents(Number(card.price));
-      lineItems.push({
-        quantity: qty,
-        price_data: {
-          currency: "usd",
-          unit_amount: unitPriceCents,
-          product_data: {
-            name: String(card.name),
-            images: card.image ? [String(card.image)] : [],
-            metadata: {
-              cardId: String(card._id),
-              brand: String((card as any).brand?.name || ""),
-              rarity: String((card as any).rarity || ""),
-              inventoryType: "bulk",
-            },
-          },
-        },
-      });
-      reservationItems.push({ card: card._id, quantity: qty });
+      throw reserveErr;
     }
 
-    // Create inventory reservation to hold items during Stripe checkout
+    // Create inventory reservation record (for tracking/cleanup)
     const reservation = await Reservation.create({
       holderKey: session.user.id,
       holderType: "user",

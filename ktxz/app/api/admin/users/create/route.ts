@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { requireAdmin } from "@/lib/requireAdmin";
+import { logAdminAction } from "@/lib/auditLog";
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
 
 export async function POST(req: Request) {
-  const adminResult = await requireAdmin();
+  const adminResult = await requireAdmin(req, { limit: 10 });
   if (adminResult instanceof NextResponse) return adminResult;
+  const session = adminResult;
 
   await dbConnect();
 
@@ -38,6 +40,20 @@ export async function POST(req: Request) {
     email: normalizedEmail,
     password: hashedPassword,
     role: validRole,
+  });
+
+  // Audit log
+  logAdminAction({
+    adminId: session.user.id,
+    adminEmail: session.user.email,
+    action: "USER_CREATED",
+    targetType: "user",
+    targetId: user._id.toString(),
+    metadata: {
+      createdEmail: normalizedEmail,
+      createdRole: validRole,
+    },
+    req,
   });
 
   return NextResponse.json({

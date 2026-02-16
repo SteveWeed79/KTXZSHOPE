@@ -10,14 +10,16 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/requireAdmin";
+import { logAdminAction } from "@/lib/auditLog";
 import dbConnect from "@/lib/dbConnect";
 import Order from "@/models/Order";
 import { errorResponse } from "@/lib/apiResponse";
 
 export async function POST(req: NextRequest) {
   try {
-    const adminResult = await requireAdmin();
+    const adminResult = await requireAdmin(req, { limit: 20 });
     if (adminResult instanceof NextResponse) return adminResult;
+    const session = adminResult;
 
     const body = await req.json();
     const { orderId, trackingNumber, carrier, notes } = body;
@@ -38,6 +40,21 @@ export async function POST(req: NextRequest) {
     order.notes = notes || "";
 
     await order.save();
+
+    // Audit log
+    logAdminAction({
+      adminId: session.user.id,
+      adminEmail: session.user.email,
+      action: "ORDER_TRACKING_UPDATE",
+      targetType: "order",
+      targetId: orderId,
+      metadata: {
+        orderNumber: order.orderNumber,
+        trackingNumber: trackingNumber || "",
+        carrier: carrier || "",
+      },
+      req,
+    });
 
     return NextResponse.json({
       success: true,
