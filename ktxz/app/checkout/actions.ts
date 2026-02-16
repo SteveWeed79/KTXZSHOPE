@@ -1,10 +1,15 @@
 /**
  * ============================================================================
  * FILE: ktxz/app/checkout/actions.ts
- * STATUS: MODIFIED (Database cart support)
+ * STATUS: MODIFIED (Atomic inventory + rate limiting)
  * ============================================================================
- * 
- * Create Stripe checkout session with database cart support
+ *
+ * Create Stripe checkout session with atomic inventory reservation.
+ *
+ * SECURITY:
+ * - Atomic findOneAndUpdate prevents overselling (no TOCTOU race)
+ * - Stock is decremented at checkout, restored on expiry/cancellation
+ * - Rate limited to prevent abuse
  */
 
 "use server";
@@ -17,6 +22,7 @@ import { auth } from "@/auth";
 import { getStripe } from "@/lib/stripe";
 import { loadCart } from "@/lib/cartHelpers";
 import Reservation from "@/models/Reservation";
+import { checkActionRateLimit } from "@/lib/rateLimit";
 
 const HOLD_MINUTES = 10;
 
@@ -26,45 +32,39 @@ function getSiteUrl() {
   return url.replace(/\/+$/, "");
 }
 
-async function getActiveReservedQtyByCardId(cardIds: string[], now: Date) {
-  const map = new Map<string, number>();
-  if (cardIds.length === 0) return map;
-
-  const objectIds = cardIds
-    .filter((id) => mongoose.Types.ObjectId.isValid(id))
-    .map((id) => new mongoose.Types.ObjectId(id));
-
-  if (objectIds.length === 0) return map;
-
-  const rows = await Reservation.aggregate([
-    {
-      $match: {
-        status: "active",
-        expiresAt: { $gt: now },
-      },
-    },
-    { $unwind: "$items" },
-    {
-      $match: {
-        "items.card": { $in: objectIds },
-      },
-    },
-    {
-      $group: {
-        _id: "$items.card",
-        qty: { $sum: "$items.quantity" },
-      },
-    },
-  ]);
-
-  for (const r of rows) {
-    map.set(String(r._id), Number(r.qty || 0));
+/**
+ * Roll back atomically reserved stock if checkout fails partway through.
+ * Restores stock for items that were already decremented.
+ */
+async function rollbackReservedStock(
+  reserved: Array<{ cardId: string; qty: number; inventoryType: string }>
+) {
+  for (const item of reserved) {
+    try {
+      if (item.inventoryType === "single") {
+        await Card.findOneAndUpdate(
+          { _id: item.cardId, status: "reserved" },
+          { $set: { status: "active", isActive: true }, $inc: { stock: 1 } }
+        );
+      } else {
+        await Card.findOneAndUpdate(
+          { _id: item.cardId, inventoryType: "bulk" },
+          { $inc: { stock: item.qty }, $set: { status: "active", isActive: true } }
+        );
+      }
+    } catch (err) {
+      console.error(`Failed to rollback stock for card ${item.cardId}:`, err);
+    }
   }
-
-  return map;
 }
 
 export async function createCheckoutSession() {
+  // Rate limit: 5 checkout attempts per minute per IP
+  const rl = await checkActionRateLimit("strict", 5, "createCheckoutSession");
+  if (!rl.success) {
+    redirect("/cart?error=rate-limit");
+  }
+
   const stripe = getStripe();
   if (!stripe) throw new Error("Stripe is not configured (missing STRIPE_SECRET_KEY).");
 
@@ -95,8 +95,13 @@ export async function createCheckoutSession() {
   const now = new Date();
   const expiresAt = new Date(now.getTime() + HOLD_MINUTES * 60 * 1000);
 
-  const reservedQtyByCardId = await getActiveReservedQtyByCardId(validIds, now);
-
+  // ---------------------------------------------------------------
+  // ATOMIC INVENTORY RESERVATION
+  //
+  // To prevent overselling, we atomically decrement stock at
+  // checkout time using findOneAndUpdate with stock guards.
+  // If checkout fails or the reservation expires, stock is restored.
+  // ---------------------------------------------------------------
   const lineItems: Array<{
     price_data: {
       currency: string;
@@ -112,36 +117,73 @@ export async function createCheckoutSession() {
   }> = [];
 
   const reservationItems: Array<{ card: mongoose.Types.ObjectId; quantity: number }> = [];
+  // Track items we've already reserved so we can roll back on failure
+  const reservedCards: Array<{ cardId: string; qty: number; inventoryType: string }> = [];
 
   for (const it of items) {
     const card = cardsById.get(it.cardId);
-    if (!card) redirect("/cart?error=missing-item");
+    if (!card) {
+      // Roll back any stock already reserved for earlier items
+      await rollbackReservedStock(reservedCards);
+      redirect("/cart?error=missing-item");
+    }
 
     const price = Number(card.price);
-    if (!Number.isFinite(price) || price <= 0) redirect("/cart?error=bad-price");
+    if (!Number.isFinite(price) || price <= 0) {
+      await rollbackReservedStock(reservedCards);
+      redirect("/cart?error=bad-price");
+    }
 
-    const isInactive = card.isActive === false || card.status === "inactive";
-    const isSold = card.status === "sold";
     const inventoryType = (card.inventoryType || "single") as "single" | "bulk";
     const isBulk = inventoryType === "bulk";
-    const stock = typeof card.stock === "number" ? card.stock : isBulk ? 0 : 1;
-
-    const canBuy = !isInactive && !isSold && (!isBulk || stock > 0);
-    if (!canBuy) redirect("/cart?error=unavailable");
-
     const qtyRequested = isBulk ? Math.max(1, Math.floor(Number(it.qty || 1))) : 1;
 
     if (inventoryType === "single") {
-      const alreadyReserved = reservedQtyByCardId.get(String(card._id)) ?? 0;
-      if (alreadyReserved > 0) {
+      // Atomically reserve a single card — only succeeds if active + stock >= 1
+      const reserved = await Card.findOneAndUpdate(
+        {
+          _id: it.cardId,
+          status: "active",
+          isActive: true,
+          stock: { $gte: 1 },
+        },
+        {
+          $set: { status: "reserved" },
+          $inc: { stock: -1 },
+        },
+        { new: true }
+      );
+
+      if (!reserved) {
+        // Item unavailable — roll back earlier reservations
+        await rollbackReservedStock(reservedCards);
         redirect("/cart?error=reserved");
       }
-    } else {
-      const alreadyReserved = reservedQtyByCardId.get(String(card._id)) ?? 0;
-      const available = Math.max(0, stock - alreadyReserved);
 
-      if (available <= 0) redirect("/cart?error=out-of-stock");
-      if (qtyRequested > available) redirect("/cart?error=insufficient-stock");
+      reservedCards.push({ cardId: it.cardId, qty: 1, inventoryType: "single" });
+    } else {
+      // Bulk: atomically decrement stock with guard
+      const reserved = await Card.findOneAndUpdate(
+        {
+          _id: it.cardId,
+          inventoryType: "bulk",
+          status: "active",
+          isActive: true,
+          stock: { $gte: qtyRequested },
+        },
+        {
+          $inc: { stock: -qtyRequested },
+        },
+        { new: true }
+      );
+
+      if (!reserved) {
+        // Insufficient stock — roll back earlier reservations
+        await rollbackReservedStock(reservedCards);
+        redirect("/cart?error=insufficient-stock");
+      }
+
+      reservedCards.push({ cardId: it.cardId, qty: qtyRequested, inventoryType: "bulk" });
     }
 
     const qty = isBulk ? qtyRequested : 1;
@@ -169,14 +211,22 @@ export async function createCheckoutSession() {
     });
   }
 
-  if (!reservationItems.length) redirect("/cart");
+  if (!reservationItems.length) {
+    redirect("/cart");
+  }
 
   const siteUrl = getSiteUrl();
 
   const holderType: "user" | "guest" = userId ? "user" : "guest";
-  // FIXED: Use cart.id if available (cookie cart), otherwise userId or timestamp
-  const holderKey = userId || cart.id || String(Date.now());
+  const holderKey = userId || cart.id || "";
 
+  // If holderKey is empty (shouldn't happen), roll back and abort
+  if (!holderKey) {
+    await rollbackReservedStock(reservedCards);
+    redirect("/cart?error=session-error");
+  }
+
+  // Cancel any existing active reservations for this holder
   await Reservation.updateMany(
     { holderType, holderKey, status: "active" },
     { $set: { status: "cancelled" } }
@@ -228,6 +278,7 @@ export async function createCheckoutSession() {
         holdMinutes: String(HOLD_MINUTES),
         source: "ktxz_checkout",
         userId: userId || "",
+        holderKey,
       },
 
       success_url: `${siteUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
@@ -251,7 +302,8 @@ export async function createCheckoutSession() {
       e?.digest?.startsWith?.("NEXT_REDIRECT") || e?.message === "NEXT_REDIRECT";
     if (isRedirect) throw e;
 
-    // Only cancel reservation for actual errors (Stripe API failure, etc.)
+    // Actual error: roll back atomic stock decrements and cancel reservation
+    await rollbackReservedStock(reservedCards);
     await Reservation.updateOne({ _id: reservation._id }, { $set: { status: "cancelled" } });
     throw e;
   }

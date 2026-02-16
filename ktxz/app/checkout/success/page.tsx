@@ -1,19 +1,42 @@
 /**
  * ============================================================================
  * FILE: ktxz/app/checkout/success/page.tsx
- * STATUS: MODIFIED (Database cart support)
+ * STATUS: MODIFIED (Session ownership validation for all users)
  * ============================================================================
- * 
- * Checkout success page with cart clearing for both database and cookie carts
+ *
+ * Checkout success page with ownership validation for both logged-in and guest users.
+ *
+ * SECURITY:
+ * - Logged-in users: verified via email match OR userId in metadata
+ * - Guest users: verified via cookie cart ID match against metadata holderKey
+ * - Prevents session enumeration attacks
  */
 
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { getStripe } from "@/lib/stripe";
 import { auth } from "@/auth";
 import { clearCart } from "@/lib/cartHelpers";
+import { getCartFromCookies } from "@/lib/cartCookie";
 
 function money(cents: number) {
   return `$${(cents / 100).toFixed(2)}`;
+}
+
+function AccessDenied() {
+  return (
+    <main className="min-h-[80vh] py-16 max-w-4xl mx-auto">
+      <div className="border border-border bg-card rounded-2xl p-10 text-center">
+        <h1 className="text-3xl brand-heading">Access Denied</h1>
+        <p className="text-muted-foreground font-mono text-[10px] tracking-[0.3em] uppercase mt-4">
+          This order does not belong to your account
+        </p>
+        <Link href="/shop" className="btn-primary inline-block mt-10">
+          Return to Shop
+        </Link>
+      </div>
+    </main>
+  );
 }
 
 export default async function CheckoutSuccessPage({
@@ -86,22 +109,39 @@ export default async function CheckoutSuccessPage({
     );
   }
 
-  // Validate that this session belongs to the current user
+  // ---------------------------------------------------------------
+  // SESSION OWNERSHIP VALIDATION
+  //
+  // Verify the requesting user owns this checkout session.
+  // - Logged-in users: match userId or email
+  // - Guest users: match cookie cart ID against metadata holderKey
+  // ---------------------------------------------------------------
   const sessionEmail = (session.customer_details?.email || session.customer_email || "").toLowerCase();
-  if (userEmail && sessionEmail && userEmail !== sessionEmail) {
-    return (
-      <main className="min-h-[80vh] py-16 max-w-4xl mx-auto">
-        <div className="border border-border bg-card rounded-2xl p-10 text-center">
-          <h1 className="text-3xl brand-heading">Access Denied</h1>
-          <p className="text-muted-foreground font-mono text-[10px] tracking-[0.3em] uppercase mt-4">
-            This order does not belong to your account
-          </p>
-          <Link href="/shop" className="btn-primary inline-block mt-10">
-            Return to Shop
-          </Link>
-        </div>
-      </main>
-    );
+  const metadataUserId = session.metadata?.userId || "";
+  const metadataHolderKey = session.metadata?.holderKey || "";
+
+  let isOwner = false;
+
+  if (userId) {
+    // Logged-in user: verify via userId in metadata or email match
+    if (metadataUserId && metadataUserId === userId) {
+      isOwner = true;
+    } else if (userEmail && sessionEmail && userEmail === sessionEmail) {
+      isOwner = true;
+    }
+  } else {
+    // Guest user: verify via cookie cart ID matching metadata holderKey
+    if (metadataHolderKey) {
+      const cookieStore = await cookies();
+      const cookieCart = getCartFromCookies(cookieStore);
+      if (cookieCart.id && cookieCart.id === metadataHolderKey) {
+        isOwner = true;
+      }
+    }
+  }
+
+  if (!isOwner) {
+    return <AccessDenied />;
   }
 
   const paid = session.payment_status === "paid";
