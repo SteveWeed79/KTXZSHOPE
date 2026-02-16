@@ -25,13 +25,19 @@ interface AuditLogEntry {
 
 /**
  * Extract client IP and user agent from a request for audit purposes.
+ * Uses the same trust order as rate limiting: x-vercel-forwarded-for > x-real-ip > x-forwarded-for
  */
 function extractRequestContext(req?: Request) {
   if (!req) return { ipAddress: "", userAgent: "" };
 
+  // Prefer Vercel's header (cannot be spoofed), then x-real-ip, then x-forwarded-for
+  const vercelIp = req.headers.get("x-vercel-forwarded-for");
   const realIp = req.headers.get("x-real-ip");
   const forwarded = req.headers.get("x-forwarded-for");
-  const ipAddress = realIp || (forwarded ? forwarded.split(",")[0].trim() : "");
+  const ipAddress =
+    (vercelIp ? vercelIp.split(",")[0].trim() : "") ||
+    (realIp ? realIp.trim() : "") ||
+    (forwarded ? forwarded.split(",").pop()?.trim() || "" : "");
   const userAgent = req.headers.get("user-agent") || "";
 
   return { ipAddress, userAgent };
