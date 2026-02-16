@@ -56,23 +56,20 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Legal */}
+          {/* Help */}
           <div className="space-y-3">
             <h3 className="text-[10px] font-bold uppercase tracking-widest text-foreground">
-              Legal
+              Help
             </h3>
             <div className="flex flex-col gap-2">
-              <Link href="/legal/terms" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-                Terms of Service
+              <Link href="/support" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                Contact Support
               </Link>
-              <Link href="/legal/privacy" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-                Privacy Policy
+              <Link href="/support" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                Returns &amp; Refunds
               </Link>
-              <Link href="/legal/returns" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-                Return Policy
-              </Link>
-              <Link href="/legal/shipping" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-                Shipping Policy
+              <Link href="/support" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                Shipping Info
               </Link>
             </div>
           </div>

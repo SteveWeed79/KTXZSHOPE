@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, use } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { StatusStepper } from "@/components/StatusStepper";
 import { Printer, Mail, Package, Send } from "lucide-react";
@@ -203,9 +204,9 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               <div className="space-y-4">
                 {order.items.map((item, index) => (
                   <div key={index} className="flex items-center gap-4 border-b border-border pb-4 last:border-b-0">
-                    <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                    <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center overflow-hidden relative">
                       {item.image ? (
-                        <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                        <Image src={item.image} alt={item.name} fill sizes="64px" className="object-cover" />
                       ) : (
                         <span className="text-muted-foreground text-xs">No img</span>
                       )}

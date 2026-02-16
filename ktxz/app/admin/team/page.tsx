@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Image from "next/image";
 import { Shield, ShieldOff, Search, Users, Crown, UserPlus } from "lucide-react";
 
 interface UserEntry {
@@ -132,7 +133,7 @@ export default function AdminTeamPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" role="status" aria-label="Loading team" />
       </div>
     );
   }
@@ -148,10 +149,10 @@ export default function AdminTeamPage() {
 
       {message && (
         <div
-          className={`p-3 rounded-lg text-sm border ${
+          className={`p-3 rounded-xl text-sm border ${
             message.type === "error"
               ? "bg-red-500/10 text-red-500 border-red-500/20"
-              : "bg-primary/10 text-primary border-primary/20"
+              : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
           }`}
         >
           {message.text}
@@ -181,9 +182,11 @@ export default function AdminTeamPage() {
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
                     {user.image ? (
-                      <img
+                      <Image
                         src={user.image}
                         alt=""
+                        width={40}
+                        height={40}
                         className="w-10 h-10 rounded-full object-cover"
                       />
                     ) : (
@@ -257,7 +260,7 @@ export default function AdminTeamPage() {
           <button
             type="submit"
             disabled={creating || !newAdminEmail.trim() || newAdminPassword.length < 8}
-            className="w-full py-3 bg-primary text-primary-foreground font-bold rounded-xl hover:brightness-90 transition-all uppercase text-xs tracking-wide disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full btn-primary py-3 flex items-center justify-center gap-2"
           >
             <UserPlus className="h-4 w-4" />
             {creating ? "Creating..." : "Create Admin Account"}
@@ -291,7 +294,7 @@ export default function AdminTeamPage() {
           <button
             onClick={handleSearch}
             disabled={searching || !searchQuery.trim()}
-            className="px-6 bg-primary text-primary-foreground font-bold rounded-xl hover:brightness-90 transition-all uppercase text-xs tracking-wide disabled:opacity-50"
+            className="btn-primary"
           >
             {searching ? "..." : "Search"}
           </button>
@@ -310,9 +313,11 @@ export default function AdminTeamPage() {
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 rounded-full bg-muted border border-border flex items-center justify-center">
                     {user.image ? (
-                      <img
+                      <Image
                         src={user.image}
                         alt=""
+                        width={40}
+                        height={40}
                         className="w-10 h-10 rounded-full object-cover"
                       />
                     ) : (

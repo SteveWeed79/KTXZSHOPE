@@ -9,8 +9,6 @@
 
 import Link from "next/link";
 import { getStripe } from "@/lib/stripe";
-import dbConnect from "@/lib/dbConnect";
-import Card from "@/models/Card";
 import { auth } from "@/auth";
 import { clearCart } from "@/lib/cartHelpers";
 
@@ -27,8 +25,8 @@ export default async function CheckoutSuccessPage({
   if (!stripe) {
     return (
       <main className="min-h-[80vh] py-16 max-w-4xl mx-auto">
-        <div className="border border-border bg-card rounded-3xl p-10 text-center">
-          <h1 className="text-3xl brand-heading-italic">
+        <div className="border border-border bg-card rounded-2xl p-10 text-center">
+          <h1 className="text-3xl brand-heading">
             Checkout Complete
           </h1>
           <p className="text-muted-foreground font-mono text-[10px] tracking-[0.3em] uppercase mt-4">
@@ -47,8 +45,8 @@ export default async function CheckoutSuccessPage({
   if (!session_id) {
     return (
       <main className="min-h-[80vh] py-16 max-w-4xl mx-auto">
-        <div className="border border-border bg-card rounded-3xl p-10 text-center">
-          <h1 className="text-3xl brand-heading-italic">
+        <div className="border border-border bg-card rounded-2xl p-10 text-center">
+          <h1 className="text-3xl brand-heading">
             Checkout Complete
           </h1>
           <p className="text-muted-foreground font-mono text-[10px] tracking-[0.3em] uppercase mt-4">
@@ -75,8 +73,8 @@ export default async function CheckoutSuccessPage({
   } catch {
     return (
       <main className="min-h-[80vh] py-16 max-w-4xl mx-auto">
-        <div className="border border-border bg-card rounded-3xl p-10 text-center">
-          <h1 className="text-3xl brand-heading-italic">Invalid Session</h1>
+        <div className="border border-border bg-card rounded-2xl p-10 text-center">
+          <h1 className="text-3xl brand-heading">Invalid Session</h1>
           <p className="text-muted-foreground font-mono text-[10px] tracking-[0.3em] uppercase mt-4">
             The checkout session could not be found
           </p>
@@ -93,8 +91,8 @@ export default async function CheckoutSuccessPage({
   if (userEmail && sessionEmail && userEmail !== sessionEmail) {
     return (
       <main className="min-h-[80vh] py-16 max-w-4xl mx-auto">
-        <div className="border border-border bg-card rounded-3xl p-10 text-center">
-          <h1 className="text-3xl brand-heading-italic">Access Denied</h1>
+        <div className="border border-border bg-card rounded-2xl p-10 text-center">
+          <h1 className="text-3xl brand-heading">Access Denied</h1>
           <p className="text-muted-foreground font-mono text-[10px] tracking-[0.3em] uppercase mt-4">
             This order does not belong to your account
           </p>
@@ -123,14 +121,11 @@ export default async function CheckoutSuccessPage({
       ? session.total_details.amount_shipping
       : 0;
 
-  await dbConnect();
-  void Card;
-
   return (
     <main className="min-h-[80vh] section-spacing max-w-5xl mx-auto">
-      <div className="border border-border bg-card rounded-3xl p-10">
+      <div className="border border-border bg-card rounded-2xl p-10">
         <div className="text-center">
-          <h1 className="text-4xl brand-heading-italic">
+          <h1 className="text-4xl brand-heading">
             {paid ? "Payment Authorized" : "Payment Pending"}
           </h1>
           <p className="text-muted-foreground font-mono text-[10px] tracking-[0.3em] uppercase mt-3">
@@ -150,7 +145,7 @@ export default async function CheckoutSuccessPage({
 
         <div className="mt-10 grid grid-cols-1 lg:grid-cols-12 grid-spacing">
           <section className="lg:col-span-7">
-            <h2 className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-4">
+            <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4">
               Items
             </h2>
 
@@ -189,7 +184,7 @@ export default async function CheckoutSuccessPage({
           </section>
 
           <aside className="lg:col-span-5">
-            <h2 className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-4">
+            <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4">
               Totals
             </h2>
 

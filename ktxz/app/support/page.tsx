@@ -7,7 +7,7 @@ export default function SupportPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
           <div className="lg:col-span-2 space-y-8">
             <div>
-              <h1 className="text-4xl font-bold tracking-tighter uppercase">Support</h1>
+              <h1 className="text-4xl brand-heading">Support</h1>
               <p className="text-muted-foreground text-sm mt-2">
                 Have a question or need help with an order? Reach out below.
               </p>
@@ -71,7 +71,7 @@ export default function SupportPage() {
 
                 <button
                   type="submit"
-                  className="bg-primary text-primary-foreground px-8 py-3 rounded-xl font-bold hover:brightness-90 transition-all"
+                  className="btn-primary"
                 >
                   Send Inquiry
                 </button>

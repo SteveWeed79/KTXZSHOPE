@@ -13,6 +13,7 @@ import Card from "@/models/Card";
 import Order from "@/models/Order";
 import AdminSection from "@/components/AdminSection";
 import VaultAutoRefresh from "@/components/VaultAutoRefresh";
+import Image from "next/image";
 import Link from "next/link";
 import { Package, Clock, CheckCircle } from "lucide-react";
 
@@ -82,7 +83,7 @@ export default async function AdminPage() {
 
       <div className="max-w-5xl mx-auto space-y-6">
         <header className="mb-8">
-          <h1 className="text-3xl brand-heading">
+          <h1 className="text-4xl brand-heading">
             Dashboard
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
@@ -164,7 +165,7 @@ export default async function AdminPage() {
               placeholder="New category name"
               className="flex-1 bg-background border border-border p-3 rounded-xl text-foreground outline-none focus:ring-1 focus:ring-primary transition-all placeholder:text-muted-foreground"
             />
-            <button className="bg-primary text-primary-foreground px-6 font-bold rounded-xl hover:brightness-90 transition-all uppercase text-xs tracking-wide">
+            <button className="btn-primary">
               Add
             </button>
           </form>
@@ -303,9 +304,11 @@ export default async function AdminPage() {
                 >
                   <div className="flex items-start justify-between mb-6">
                     <div className="flex gap-5">
-                      <img
-                        src={card.image || "https://via.placeholder.com/150"}
+                      <Image
+                        src={card.image || "/placeholder-card.png"}
                         alt=""
+                        width={64}
+                        height={96}
                         className="w-16 h-24 object-cover rounded-lg border border-border"
                       />
                       <div>
@@ -359,7 +362,7 @@ export default async function AdminPage() {
                       <div className="flex gap-2 justify-end">
                         <button
                           type="submit"
-                          className="px-6 py-3 bg-primary text-primary-foreground text-[10px] font-bold uppercase rounded-lg hover:brightness-90 transition-all"
+                          className="btn-primary"
                         >
                           Update Schedule
                         </button>
@@ -405,9 +408,11 @@ export default async function AdminPage() {
                   {/* Top Row */}
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
                     <div className="lg:col-span-1 flex justify-center">
-                      <img
-                        src={card.image || "https://via.placeholder.com/150"}
+                      <Image
+                        src={card.image || "/placeholder-card.png"}
                         alt=""
+                        width={48}
+                        height={64}
                         className="w-12 h-16 object-cover rounded border border-border"
                       />
                     </div>

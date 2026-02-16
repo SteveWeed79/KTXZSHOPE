@@ -38,7 +38,7 @@ export default async function ProfilePage() {
         </div>
 
         <div className="text-center md:text-left">
-          <h1 className="text-4xl font-bold uppercase tracking-tighter">
+          <h1 className="text-4xl brand-heading">
             {user.name}
           </h1>
           <p className="text-muted-foreground text-sm mt-1">

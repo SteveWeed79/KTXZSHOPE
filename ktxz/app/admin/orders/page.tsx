@@ -167,7 +167,7 @@ export default function AdminOrdersPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
+        <div className="text-center" role="status" aria-label="Loading orders">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
           <p className="mt-4 text-muted-foreground text-sm">Loading orders...</p>
         </div>
@@ -244,7 +244,7 @@ export default function AdminOrdersPage() {
                 placeholder="Order #, email, name..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-4 py-2 bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:ring-1 focus:ring-primary focus:border-primary transition-all"
+                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:ring-1 focus:ring-primary focus:border-primary transition-all"
               />
             </div>
             <div>
@@ -254,7 +254,7 @@ export default function AdminOrdersPage() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-                className="w-full px-4 py-2 bg-background border border-border rounded-lg text-foreground"
+                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm text-foreground focus:ring-1 focus:ring-primary focus:border-primary transition-all"
               >
                 <option value="all">All Statuses</option>
                 <option value="pending">Pending</option>
@@ -272,7 +272,7 @@ export default function AdminOrdersPage() {
                 type="date"
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
-                className="w-full px-4 py-2 bg-background border border-border rounded-lg text-foreground"
+                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm text-foreground focus:ring-1 focus:ring-primary focus:border-primary transition-all"
               />
             </div>
             <div>
@@ -283,7 +283,7 @@ export default function AdminOrdersPage() {
                 type="date"
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
-                className="w-full px-4 py-2 bg-background border border-border rounded-lg text-foreground"
+                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm text-foreground focus:ring-1 focus:ring-primary focus:border-primary transition-all"
               />
             </div>
           </div>
@@ -308,7 +308,7 @@ export default function AdminOrdersPage() {
 
             <button
               onClick={exportOrders}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:brightness-90 transition-all text-sm font-medium flex items-center gap-2"
+              className="btn-primary flex items-center gap-2"
             >
               <Download className="h-4 w-4" /> Export CSV
             </button>
@@ -316,29 +316,29 @@ export default function AdminOrdersPage() {
         </div>
 
         {/* Table */}
-        <div className="bg-card border border-border rounded-xl overflow-hidden">
+        <div className="bg-card border border-border rounded-xl overflow-x-auto">
           <table className="min-w-full divide-y divide-border">
             <thead className="bg-muted">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                   Order #
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                   Date
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                   Customer
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                   Items
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                   Total
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                   Actions
                 </th>
               </tr>
