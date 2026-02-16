@@ -13,6 +13,7 @@ import Card from "@/models/Card";
 import Order from "@/models/Order";
 import AdminSection from "@/components/AdminSection";
 import VaultAutoRefresh from "@/components/VaultAutoRefresh";
+import Image from "next/image";
 import Link from "next/link";
 import { Package, Clock, CheckCircle } from "lucide-react";
 
@@ -303,9 +304,11 @@ export default async function AdminPage() {
                 >
                   <div className="flex items-start justify-between mb-6">
                     <div className="flex gap-5">
-                      <img
-                        src={card.image || "https://via.placeholder.com/150"}
+                      <Image
+                        src={card.image || "/placeholder-card.png"}
                         alt=""
+                        width={64}
+                        height={96}
                         className="w-16 h-24 object-cover rounded-lg border border-border"
                       />
                       <div>
@@ -405,9 +408,11 @@ export default async function AdminPage() {
                   {/* Top Row */}
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
                     <div className="lg:col-span-1 flex justify-center">
-                      <img
-                        src={card.image || "https://via.placeholder.com/150"}
+                      <Image
+                        src={card.image || "/placeholder-card.png"}
                         alt=""
+                        width={48}
+                        height={64}
                         className="w-12 h-16 object-cover rounded border border-border"
                       />
                     </div>

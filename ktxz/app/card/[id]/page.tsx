@@ -1,3 +1,4 @@
+import Image from "next/image";
 import dbConnect from "@/lib/dbConnect";
 import Card from "@/models/Card";
 import { notFound } from "next/navigation";
@@ -41,9 +42,9 @@ export default async function CardPage({
         </nav>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-16 mt-6">
-          <div className="bg-muted rounded-2xl aspect-[2.5/3.5] border border-border flex items-center justify-center overflow-hidden">
+          <div className="bg-muted rounded-2xl aspect-[2.5/3.5] border border-border flex items-center justify-center overflow-hidden relative">
             {card.image ? (
-              <img src={card.image} alt={card.name} className="w-full h-full object-cover" />
+              <Image src={card.image} alt={card.name} fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover" />
             ) : (
               <span className="text-muted-foreground text-6xl font-bold">TCG</span>
             )}

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import VaultTimer from "./VaultTimer";
 
@@ -37,10 +38,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ card }) => {
       )}
 
       <div className="relative w-full aspect-[2.5/3.5] overflow-hidden rounded-medium-soft bg-muted border border-transparent group-hover:border-primary transition-all duration-300 elevation-card">
-        <img
+        <Image
           src={card.image || "/placeholder-card.png"}
           alt={card.name}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          fill
+          sizes="(max-width: 768px) 50vw, 25vw"
+          className="object-cover group-hover:scale-105 transition-transform duration-500"
         />
 
         {card.isVault && (

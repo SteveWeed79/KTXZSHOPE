@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import dbConnect from "@/lib/dbConnect";
 import Card from "@/models/Card";
@@ -98,12 +99,14 @@ export default async function CartPage() {
                   className="bg-card rounded-card elevation-card p-6 flex gap-5"
                 >
                   <div className="w-20 shrink-0">
-                    <div className="aspect-[2.5/3.5] bg-muted border border-border rounded-xl overflow-hidden">
+                    <div className="aspect-[2.5/3.5] bg-muted border border-border rounded-xl overflow-hidden relative">
                       {r.image ? (
-                        <img
+                        <Image
                           src={r.image}
                           alt={r.name}
-                          className="w-full h-full object-cover"
+                          fill
+                          sizes="80px"
+                          className="object-cover"
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-muted-foreground font-bold">

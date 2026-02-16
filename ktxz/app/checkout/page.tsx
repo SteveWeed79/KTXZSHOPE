@@ -1,3 +1,4 @@
+import Image from "next/image";
 import dbConnect from "@/lib/dbConnect";
 import Card from "@/models/Card";
 import Link from "next/link";
@@ -72,11 +73,13 @@ export default async function CheckoutPage() {
                 >
                   <div className="flex items-start gap-4">
                     <div className="w-16 shrink-0">
-                      <div className="aspect-[2.5/3.5] rounded-xl overflow-hidden border border-border bg-muted">
-                        <img
+                      <div className="aspect-[2.5/3.5] rounded-xl overflow-hidden border border-border bg-muted relative">
+                        <Image
                           src={r.card.image || "/placeholder-card.png"}
                           alt={r.card.name}
-                          className="w-full h-full object-cover"
+                          fill
+                          sizes="64px"
+                          className="object-cover"
                         />
                       </div>
                     </div>

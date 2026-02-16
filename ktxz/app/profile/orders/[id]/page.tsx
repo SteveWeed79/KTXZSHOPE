@@ -8,6 +8,7 @@
  * Shows full order information including items, addresses, tracking
  */
 
+import Image from "next/image";
 import { auth } from "@/auth";
 import { redirect, notFound } from "next/navigation";
 import dbConnect from "@/lib/dbConnect";
@@ -123,12 +124,14 @@ export default async function OrderDetailPage({
                 >
                   {/* Image */}
                   <div className="w-16 shrink-0">
-                    <div className="aspect-[2.5/3.5] bg-muted border border-border rounded-xl overflow-hidden">
+                    <div className="aspect-[2.5/3.5] bg-muted border border-border rounded-xl overflow-hidden relative">
                       {item.image ? (
-                        <img
+                        <Image
                           src={item.image}
                           alt={item.name}
-                          className="w-full h-full object-cover"
+                          fill
+                          sizes="64px"
+                          className="object-cover"
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-muted-foreground font-black text-xs">
