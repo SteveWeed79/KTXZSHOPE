@@ -11,33 +11,67 @@
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
 
 /**
- * Extract client IP from request headers.
- * IMPORTANT: In production, ensure your reverse proxy (Vercel, Nginx, etc.)
- * sets x-forwarded-for / x-real-ip. Without a trusted proxy, these headers
- * can be spoofed by clients. Prefer x-real-ip when set by the proxy itself.
+ * Simple IPv4/IPv6 format validation — rejects obviously malformed values.
+ * This isn't exhaustive but prevents header injection of non-IP strings.
  */
-function getIdentifier(request: Request): string {
-  // Prefer x-real-ip (typically set by the proxy itself, harder to spoof)
-  const realIp = request.headers.get("x-real-ip");
-  if (realIp) return realIp;
+function looksLikeIp(value: string): boolean {
+  // IPv4: 1-3 digit groups separated by dots
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(value)) return true;
+  // IPv6: hex groups separated by colons (including shortened forms)
+  if (/^[0-9a-fA-F:]+$/.test(value) && value.includes(":")) return true;
+  // IPv4-mapped IPv6 (::ffff:192.168.1.1)
+  if (/^::ffff:\d{1,3}(\.\d{1,3}){3}$/i.test(value)) return true;
+  return false;
+}
 
-  const forwarded = request.headers.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0].trim();
+/**
+ * Extract client IP from request headers.
+ *
+ * TRUST ORDER (most trustworthy first):
+ * 1. x-vercel-forwarded-for — set by Vercel's edge, cannot be spoofed by clients
+ * 2. x-real-ip — typically set by reverse proxy (Nginx, Cloudflare)
+ * 3. x-forwarded-for — rightmost non-private IP (leftmost can be spoofed)
+ * 4. "unknown" — fallback when behind no proxy (e.g. local dev)
+ *
+ * IMPORTANT: On Vercel, x-vercel-forwarded-for is authoritative. For other
+ * hosting providers, ensure your reverse proxy overwrites (not appends)
+ * x-real-ip so it cannot be client-spoofed.
+ */
+function extractIp(headerGetter: { get: (name: string) => string | null }): string {
+  // 1. Vercel-specific header (cannot be spoofed by clients)
+  const vercelIp = headerGetter.get("x-vercel-forwarded-for");
+  if (vercelIp) {
+    const ip = vercelIp.split(",")[0].trim();
+    if (ip && looksLikeIp(ip)) return ip;
+  }
+
+  // 2. x-real-ip — set by the proxy itself, generally trustworthy
+  const realIp = headerGetter.get("x-real-ip");
+  if (realIp) {
+    const ip = realIp.trim();
+    if (ip && looksLikeIp(ip)) return ip;
+  }
+
+  // 3. x-forwarded-for — take the LAST entry (closest to the server)
+  //    because clients can prepend fake IPs to the left side
+  const forwarded = headerGetter.get("x-forwarded-for");
+  if (forwarded) {
+    const parts = forwarded.split(",").map((s) => s.trim()).filter(Boolean);
+    // Use rightmost IP — it's the one added by the outermost trusted proxy
+    for (let i = parts.length - 1; i >= 0; i--) {
+      if (looksLikeIp(parts[i])) return parts[i];
+    }
+  }
 
   return "unknown";
 }
 
-/**
- * Extract IP from next/headers for use in server actions (no Request object).
- */
+function getIdentifier(request: Request): string {
+  return extractIp({ get: (name: string) => request.headers.get(name) });
+}
+
 function getIdentifierFromHeaders(headerStore: { get: (name: string) => string | null }): string {
-  const realIp = headerStore.get("x-real-ip");
-  if (realIp) return realIp;
-
-  const forwarded = headerStore.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0].trim();
-
-  return "unknown";
+  return extractIp(headerStore);
 }
 
 function cleanupOldEntries(now: number) {

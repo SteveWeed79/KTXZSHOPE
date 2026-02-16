@@ -10,19 +10,13 @@
  */
 
 import { auth } from "@/auth";
+import { isAdminUser } from "@/lib/isAdmin";
 
 /**
  * Check if user object has admin privileges.
+ * Re-exports isAdminUser for backward compatibility.
  */
-export function isAdmin(user: any): boolean {
-  if (!user) return false;
-
-  const userRole = user.role;
-  const userEmail = user.email;
-  const adminEmail = process.env.ADMIN_EMAIL;
-
-  return userRole === "admin" || (!!userEmail && userEmail === adminEmail);
-}
+export const isAdmin = isAdminUser;
 
 /**
  * Get current session user (any authenticated user).

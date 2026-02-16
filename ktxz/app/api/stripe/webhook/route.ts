@@ -228,7 +228,8 @@ export async function POST(req: Request) {
     const email = (emailRaw || "").toLowerCase().trim();
 
     if (!email) {
-      return NextResponse.json({ error: "Stripe session missing customer email." }, { status: 400 });
+      console.error("Webhook: Stripe session missing customer email", sessionId);
+      return NextResponse.json({ error: "Invalid session data" }, { status: 400 });
     }
 
     // Check if order already exists
@@ -290,8 +291,9 @@ export async function POST(req: Request) {
     }
 
     if (purchased.length === 0) {
+      console.error("Webhook: No purchasable items in session line items", sessionId);
       return NextResponse.json(
-        { error: "No purchasable items found in session line items." },
+        { error: "Invalid session data" },
         { status: 400 }
       );
     }
@@ -364,7 +366,7 @@ export async function POST(req: Request) {
       console.error("Order creation failed, unclaiming event for retry:", orderErr);
       await unclaimStripeEvent(event.id);
       return NextResponse.json(
-        { error: "Order creation failed — will retry" },
+        { error: "Processing failed" },
         { status: 500 }
       );
     }
@@ -417,12 +419,7 @@ export async function POST(req: Request) {
       );
     }
 
-    return NextResponse.json({
-      received: true,
-      orderId: order._id.toString(),
-      paid,
-      emailSent,
-    });
+    return NextResponse.json({ received: true });
   } catch (err: any) {
     console.error("Webhook error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
