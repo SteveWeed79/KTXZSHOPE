@@ -37,22 +37,27 @@ function redirectBack(req: Request) {
 }
 
 export async function POST(req: Request) {
-  // Rate limit: 30 cart removes per minute per IP
-  const rl = await RateLimiters.standard.check(req, 30);
-  if (!rl.success) return rateLimitResponse(rl);
+  try {
+    // Rate limit: 30 cart removes per minute per IP
+    const rl = await RateLimiters.standard.check(req, 30);
+    if (!rl.success) return rateLimitResponse(rl);
 
-  const session = await auth();
-  const userId = session?.user?.id ?? null;
+    const session = await auth();
+    const userId = session?.user?.id ?? null;
 
-  const form = await req.formData();
-  const cardId = String(form.get("cardId") || "").trim();
+    const form = await req.formData();
+    const cardId = String(form.get("cardId") || "").trim();
 
-  if (!cardId || !mongoose.Types.ObjectId.isValid(cardId)) {
+    if (!cardId || !mongoose.Types.ObjectId.isValid(cardId)) {
+      return redirectBack(req);
+    }
+
+    // Remove from cart (handles both database and cookie)
+    await removeFromCart(userId, cardId);
+
+    return redirectBack(req);
+  } catch (err) {
+    console.error("Cart remove error:", err);
     return redirectBack(req);
   }
-
-  // Remove from cart (handles both database and cookie)
-  await removeFromCart(userId, cardId);
-
-  return redirectBack(req);
 }
