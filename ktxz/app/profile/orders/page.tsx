@@ -60,7 +60,7 @@ export default async function OrdersPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-10 border-b border-border pb-6">
         <div>
-          <h1 className="text-4xl brand-heading-italic">
+          <h1 className="text-4xl brand-heading">
             Order History
           </h1>
           <p className="text-muted-foreground font-mono text-[10px] tracking-[0.3em] uppercase mt-2">
@@ -70,7 +70,7 @@ export default async function OrdersPage() {
 
         <Link
           href="/profile"
-          className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground transition-colors"
+          className="brand-label hover:text-foreground flex items-center gap-2 transition-colors"
         >
           ← Back to Profile
         </Link>
@@ -78,13 +78,13 @@ export default async function OrdersPage() {
 
       {orders.length === 0 ? (
         /* Empty State */
-        <div className="border border-dashed border-border rounded-3xl bg-card p-12 text-center">
+        <div className="border border-dashed border-border rounded-2xl bg-card p-12 text-center">
           <div className="w-12 h-12 mx-auto mb-4 opacity-20">
             <svg fill="currentColor" viewBox="0 0 24 24">
               <path d="M20 4H4v2h16V4zm1 10v-2l-1-5H4l-1 5v2h1v6h10v-6h4v6h2v-6h1zm-9 4H6v-4h6v4z" />
             </svg>
           </div>
-          <h2 className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-2">
+          <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">
             No Orders Found
           </h2>
           <p className="text-[10px] text-muted-foreground uppercase mb-6">

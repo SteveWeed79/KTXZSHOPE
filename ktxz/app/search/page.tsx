@@ -41,7 +41,7 @@ export default async function SearchPage({
 
   return (
     <main className="min-h-screen px-6 section-spacing max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold tracking-tight uppercase mb-2">
+      <h1 className="text-4xl brand-heading mb-2">
         Search Results
       </h1>
       <p className="text-muted-foreground text-sm mb-10">

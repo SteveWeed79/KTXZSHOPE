@@ -56,7 +56,7 @@ export default async function Home() {
           <div className="flex gap-4 justify-center pt-4">
             <Link
               href="/shop"
-              className="bg-primary text-primary-foreground px-10 py-4 rounded-full font-bold flex items-center gap-2 hover:brightness-90 transition-all shadow-lg shadow-primary/20"
+              className="btn-primary px-10 py-4 flex items-center gap-2 shadow-lg shadow-primary/20"
             >
               Enter Storefront <ArrowRight className="h-4 w-4" />
             </Link>

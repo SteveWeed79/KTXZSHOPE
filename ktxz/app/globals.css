@@ -132,3 +132,9 @@
 .btn-outline {
   @apply border-2 border-foreground text-foreground font-bold py-3 px-6 rounded-medium-soft transition-all duration-200 uppercase text-xs tracking-widest hover:bg-foreground hover:text-background;
 }
+
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-outline:disabled {
+  @apply opacity-50 cursor-not-allowed;
+}

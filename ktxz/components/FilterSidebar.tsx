@@ -34,7 +34,7 @@ export default function FilterSidebar({ brands }: { brands: Brand[] }) {
           <li>
             <button
               onClick={() => handleFilterChange(null)}
-              className={`w-full text-left text-xs uppercase font-mono py-2 px-3 rounded-lg transition-colors ${
+              className={`w-full text-left text-xs uppercase font-mono py-2 px-3 rounded-lg transition-colors focus-visible:ring-1 focus-visible:ring-primary focus-visible:outline-none ${
                 !activeBrandId ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted"
               }`}
             >
@@ -45,7 +45,7 @@ export default function FilterSidebar({ brands }: { brands: Brand[] }) {
             <li key={brand._id}>
               <button
                 onClick={() => handleFilterChange(brand._id)}
-                className={`w-full text-left text-xs uppercase font-mono py-2 px-3 rounded-lg transition-colors ${
+                className={`w-full text-left text-xs uppercase font-mono py-2 px-3 rounded-lg transition-colors focus-visible:ring-1 focus-visible:ring-primary focus-visible:outline-none ${
                   activeBrandId === brand._id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 }`}
               >

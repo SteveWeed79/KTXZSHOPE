@@ -133,7 +133,7 @@ export default function AuthPage() {
         </div>
 
         {error && (
-          <div className="bg-primary/10 border border-primary/30 text-primary text-xs p-3 rounded-lg mb-6 text-center font-medium">
+          <div className="bg-red-500/10 border border-red-500/20 text-red-500 text-xs p-3 rounded-xl mb-6 text-center font-medium">
             {error}
           </div>
         )}
@@ -270,6 +270,7 @@ export default function AuthPage() {
               setIsLogin(!isLogin);
               setError("");
             }}
+            aria-label={isLogin ? "Switch to create account" : "Switch to sign in"}
             className="w-full text-muted-foreground text-sm hover:text-foreground font-medium transition-colors"
           >
             {isLogin ? "New here? Create an account" : "Already have an account? Sign in"}

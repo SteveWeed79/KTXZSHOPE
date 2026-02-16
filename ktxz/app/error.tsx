@@ -16,7 +16,7 @@ export default function ErrorPage({
   return (
     <div className="min-h-[60vh] flex items-center justify-center">
       <div className="text-center max-w-md space-y-4">
-        <h1 className="text-3xl font-bold uppercase tracking-tight">
+        <h1 className="text-3xl brand-heading">
           Something went wrong
         </h1>
         <p className="text-muted-foreground text-sm">
@@ -24,7 +24,7 @@ export default function ErrorPage({
         </p>
         <button
           onClick={reset}
-          className="bg-primary text-primary-foreground font-bold py-3 px-6 rounded-xl text-xs uppercase tracking-widest hover:brightness-90 transition-all"
+          className="btn-primary"
         >
           Try Again
         </button>

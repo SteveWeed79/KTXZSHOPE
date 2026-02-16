@@ -47,13 +47,13 @@ export default async function CheckoutPage() {
     <main className="min-h-[80vh] section-spacing max-w-6xl mx-auto">
       <div className="flex items-end justify-between gap-6 mb-10">
         <div>
-          <h1 className="text-4xl font-bold uppercase tracking-tighter">Checkout</h1>
+          <h1 className="text-4xl brand-heading">Checkout</h1>
           <p className="text-muted-foreground text-sm mt-1">
             Shipping + tax calculated at payment
           </p>
         </div>
-        <Link href="/cart" className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-2 transition-colors">
-          <ArrowLeft className="h-4 w-4" /> Back to Cart
+        <Link href="/cart" className="brand-label hover:text-foreground flex items-center gap-2 transition-colors">
+          <ArrowLeft className="h-3.5 w-3.5" /> Back to Cart
         </Link>
       </div>
 
@@ -156,9 +156,10 @@ export default async function CheckoutPage() {
             <form action={createCheckoutSession} className="mt-6">
               <button
                 disabled={hasUnavailable}
+                aria-disabled={hasUnavailable}
                 className={`w-full py-4 text-sm flex items-center justify-center gap-2 ${
                   hasUnavailable
-                    ? "bg-muted text-muted-foreground cursor-not-allowed border border-border rounded-xl font-bold transition-all"
+                    ? "bg-muted text-muted-foreground cursor-not-allowed border border-border rounded-medium-soft font-bold transition-all"
                     : "btn-primary shadow-lg shadow-primary/20 dark:shadow-primary/30"
                 }`}
               >

@@ -77,7 +77,7 @@ export default async function Navbar() {
         </div>
 
         {/* CENTER: Search */}
-        <div className="hidden lg:flex w-[420px]">
+        <div className="hidden lg:flex w-full max-w-[420px]">
           <Suspense fallback={null}>
             <SearchBar />
           </Suspense>
@@ -91,6 +91,7 @@ export default async function Navbar() {
             href="/cart"
             className="text-muted-foreground hover:text-foreground transition-colors p-1.5 hover:bg-muted rounded-md"
             title="Cart"
+            aria-label="Shopping cart"
           >
             <ShoppingBag className="h-4 w-4" />
           </Link>
@@ -109,8 +110,8 @@ export default async function Navbar() {
                   await signOut({ redirectTo: "/" });
                 }}
               >
-                <button className="text-[10px] text-muted-foreground hover:text-primary font-medium transition-colors cursor-pointer tracking-wide uppercase">
-                  Out
+                <button className="text-[10px] text-muted-foreground hover:text-primary font-bold transition-colors cursor-pointer tracking-widest uppercase">
+                  Sign Out
                 </button>
               </form>
             </div>

@@ -34,7 +34,8 @@ export default function SearchBar() {
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         placeholder="Search..."
-        className="w-full bg-muted/60 border border-transparent text-foreground text-xs rounded-full pl-9 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary focus:bg-muted transition-all duration-300 placeholder:text-muted-foreground/60"
+        aria-label="Search cards"
+        className="w-full bg-muted/60 border border-transparent text-foreground text-xs rounded-full pl-9 pr-4 py-2 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary focus:bg-muted transition-all duration-300 placeholder:text-muted-foreground"
       />
     </form>
   );

@@ -78,7 +78,7 @@ export default function AdminSettingsPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" role="status" aria-label="Loading settings" />
       </div>
     );
   }
@@ -94,10 +94,10 @@ export default function AdminSettingsPage() {
 
       {message && (
         <div
-          className={`p-3 rounded-lg text-sm ${
+          className={`p-3 rounded-xl text-sm border ${
             message.includes("Error")
-              ? "bg-primary/10 text-primary border border-primary/20"
-              : "bg-primary/10 text-primary dark:text-primary border border-primary/20"
+              ? "bg-red-500/10 text-red-500 border-red-500/20"
+              : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
           }`}
         >
           {message}
@@ -116,7 +116,7 @@ export default function AdminSettingsPage() {
                 Store Name
               </label>
               <input
-                className="w-full bg-background border border-border rounded-lg px-4 py-2 text-sm text-foreground focus:ring-1 focus:ring-primary focus:border-primary transition-all"
+                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm text-foreground focus:ring-1 focus:ring-primary focus:border-primary transition-all"
                 value={settings.storeName}
                 onChange={(e) =>
                   setSettings({ ...settings, storeName: e.target.value })
@@ -129,7 +129,7 @@ export default function AdminSettingsPage() {
               </label>
               <input
                 type="email"
-                className="w-full bg-background border border-border rounded-lg px-4 py-2 text-sm text-foreground focus:ring-1 focus:ring-primary focus:border-primary transition-all"
+                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm text-foreground focus:ring-1 focus:ring-primary focus:border-primary transition-all"
                 value={settings.supportEmail}
                 onChange={(e) =>
                   setSettings({ ...settings, supportEmail: e.target.value })
@@ -188,7 +188,7 @@ export default function AdminSettingsPage() {
               </label>
               <input
                 type="datetime-local"
-                className="w-full bg-background border border-border rounded-lg px-4 py-2 text-sm text-foreground focus:ring-1 focus:ring-primary focus:border-primary transition-all"
+                className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm text-foreground focus:ring-1 focus:ring-primary focus:border-primary transition-all"
                 value={settings.dropCountdown}
                 onChange={(e) =>
                   setSettings({ ...settings, dropCountdown: e.target.value })

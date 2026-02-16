@@ -31,7 +31,7 @@ export default async function CardPage({
           </Link>
           <span>/</span>
           <Link
-            href={`/menu/${(card.brand as any).slug}`}
+            href={`/shop?brand=${(card.brand as any)._id}`}
             className="hover:text-foreground transition-colors"
           >
             {(card.brand as any).name}
@@ -54,7 +54,7 @@ export default async function CardPage({
               {(card.brand as any).name} / {card.rarity}
             </span>
 
-            <h1 className="text-5xl md:text-7xl font-bold tracking-tighter mb-4">{card.name}</h1>
+            <h1 className="text-5xl md:text-7xl brand-heading mb-4">{card.name}</h1>
 
             <p className="text-4xl font-mono mb-6">${card.price}</p>
 
@@ -97,7 +97,7 @@ export default async function CardPage({
                       min={1}
                       max={stock}
                       defaultValue={1}
-                      className="w-24 bg-background border border-border p-3 rounded-xl text-foreground font-mono text-center outline-none focus:ring-1 focus:ring-primary"
+                      className="w-24 bg-background border border-border px-4 py-3 rounded-xl text-foreground font-mono text-center outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all"
                     />
                     <span className="text-xs text-muted-foreground">
                       of {stock} available
@@ -112,7 +112,8 @@ export default async function CardPage({
             ) : (
               <button
                 disabled
-                className="py-4 bg-muted text-muted-foreground font-bold text-lg rounded-xl w-full cursor-not-allowed border border-border"
+                aria-disabled="true"
+                className="py-4 bg-muted text-muted-foreground font-bold text-lg rounded-medium-soft w-full cursor-not-allowed border border-border"
               >
                 Unavailable
               </button>

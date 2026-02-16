@@ -82,7 +82,7 @@ export default async function AdminPage() {
 
       <div className="max-w-5xl mx-auto space-y-6">
         <header className="mb-8">
-          <h1 className="text-3xl brand-heading">
+          <h1 className="text-4xl brand-heading">
             Dashboard
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
@@ -164,7 +164,7 @@ export default async function AdminPage() {
               placeholder="New category name"
               className="flex-1 bg-background border border-border p-3 rounded-xl text-foreground outline-none focus:ring-1 focus:ring-primary transition-all placeholder:text-muted-foreground"
             />
-            <button className="bg-primary text-primary-foreground px-6 font-bold rounded-xl hover:brightness-90 transition-all uppercase text-xs tracking-wide">
+            <button className="btn-primary">
               Add
             </button>
           </form>
@@ -359,7 +359,7 @@ export default async function AdminPage() {
                       <div className="flex gap-2 justify-end">
                         <button
                           type="submit"
-                          className="px-6 py-3 bg-primary text-primary-foreground text-[10px] font-bold uppercase rounded-lg hover:brightness-90 transition-all"
+                          className="btn-primary"
                         >
                           Update Schedule
                         </button>
