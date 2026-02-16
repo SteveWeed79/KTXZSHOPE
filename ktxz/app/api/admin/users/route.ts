@@ -4,7 +4,7 @@ import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
 
 export async function GET(req: Request) {
-  const adminResult = await requireAdmin();
+  const adminResult = await requireAdmin(req, { limit: 30, limiter: "generous" });
   if (adminResult instanceof NextResponse) return adminResult;
 
   await dbConnect();

@@ -10,6 +10,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/requireAdmin";
+import { logAdminAction } from "@/lib/auditLog";
 import dbConnect from "@/lib/dbConnect";
 import Order from "@/models/Order";
 import { generateShippingNotificationEmail } from "@/lib/emails/shippingNotification";
@@ -24,8 +25,9 @@ const INVENTORY_DEDUCTED_STATUSES = ["paid", "fulfilled"];
 
 export async function POST(req: NextRequest) {
   try {
-    const adminResult = await requireAdmin();
+    const adminResult = await requireAdmin(req, { limit: 20 });
     if (adminResult instanceof NextResponse) return adminResult;
+    const session = adminResult;
 
     const body = await req.json();
     const { orderId, status } = body;
@@ -112,6 +114,23 @@ export async function POST(req: NextRequest) {
         console.error("Failed to auto-send shipping email:", emailErr);
       }
     }
+
+    // Audit log
+    logAdminAction({
+      adminId: session.user.id,
+      adminEmail: session.user.email,
+      action: "ORDER_STATUS_UPDATE",
+      targetType: "order",
+      targetId: orderId,
+      metadata: {
+        orderNumber: order.orderNumber,
+        previousStatus,
+        newStatus: status,
+        inventoryRestored,
+        emailSent,
+      },
+      req,
+    });
 
     let message = "Order status updated successfully";
     if (emailSent) message = "Order fulfilled and shipping notification sent";

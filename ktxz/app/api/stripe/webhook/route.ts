@@ -72,32 +72,57 @@ async function unclaimStripeEvent(eventId: string) {
   await col.deleteOne({ _id: eventId });
 }
 
-async function markCardsSoldOrDecrementStock(items: Array<{ cardId: string; qty: number }>) {
+/**
+ * Finalize inventory after payment succeeds.
+ *
+ * Stock was already atomically decremented at checkout time. This function
+ * handles the status transitions:
+ * - Single items: "reserved" → "sold"
+ * - Bulk items: mark "sold" if stock reached 0
+ */
+async function finalizeInventoryAfterPayment(items: Array<{ cardId: string; qty: number }>) {
   for (const it of items) {
-    const qty = Math.max(1, Number(it.qty || 1));
-
-    // Attempt atomic decrement for bulk items first
-    const bulkResult = await Card.findOneAndUpdate(
-      { _id: it.cardId, inventoryType: "bulk", stock: { $gte: qty } },
-      { $inc: { stock: -qty } },
-      { new: true }
-    );
-
-    if (bulkResult) {
-      // If stock hit zero, mark as sold
-      if ((bulkResult as any).stock <= 0) {
-        await Card.updateOne(
-          { _id: it.cardId },
-          { $set: { status: "sold", isActive: false } }
-        );
-      }
-      continue;
-    }
-
-    // Single item or bulk that didn't match — mark as sold atomically
-    await Card.findOneAndUpdate(
-      { _id: it.cardId },
+    // Single items: transition reserved → sold
+    const singleResult = await Card.findOneAndUpdate(
+      { _id: it.cardId, inventoryType: "single", status: "reserved" },
       { $set: { status: "sold", isActive: false, stock: 0 } }
+    );
+    if (singleResult) continue;
+
+    // Bulk items: check if stock hit zero, mark sold if so
+    const card = await Card.findById(it.cardId).select("inventoryType stock").lean() as any;
+    if (card && card.inventoryType === "bulk" && card.stock <= 0) {
+      await Card.updateOne(
+        { _id: it.cardId, stock: { $lte: 0 } },
+        { $set: { status: "sold", isActive: false } }
+      );
+    }
+  }
+}
+
+/**
+ * Restore stock when a checkout session expires or payment fails.
+ * Reverses the atomic decrements made during checkout.
+ */
+async function restoreReservedStock(reservationId: string) {
+  const reservation = await Reservation.findById(reservationId);
+  if (!reservation || !reservation.items) return;
+
+  for (const item of reservation.items) {
+    const cardId = item.card.toString();
+    const qty = item.quantity || 1;
+
+    // Single items: reserved → active
+    const singleResult = await Card.findOneAndUpdate(
+      { _id: cardId, inventoryType: "single", status: "reserved" },
+      { $set: { status: "active", isActive: true }, $inc: { stock: 1 } }
+    );
+    if (singleResult) continue;
+
+    // Bulk items: restore stock
+    await Card.findOneAndUpdate(
+      { _id: cardId, inventoryType: "bulk" },
+      { $inc: { stock: qty }, $set: { status: "active", isActive: true } }
     );
   }
 }
@@ -175,11 +200,13 @@ export async function POST(req: Request) {
       const reservationId = expiredSession.metadata?.reservationId;
 
       if (reservationId) {
+        // Restore stock that was atomically decremented at checkout
+        await restoreReservedStock(reservationId);
         await Reservation.updateOne(
           { _id: reservationId, status: "active" },
           { $set: { status: "cancelled" } }
         );
-        console.log(`✅ Reservation ${reservationId} cancelled (${event.type})`);
+        console.log(`✅ Reservation ${reservationId} cancelled + stock restored (${event.type})`);
       }
 
       return NextResponse.json({ received: true, handled: event.type });
@@ -342,7 +369,9 @@ export async function POST(req: Request) {
       );
     }
 
-    // Consume reservation + update inventory
+    // Consume reservation + finalize inventory status
+    // NOTE: Stock was already atomically decremented at checkout time.
+    // The webhook only needs to finalize status transitions (reserved→sold).
     const stockItems = purchased.map((p) => ({ cardId: p.cardId, qty: p.qty }));
 
     if (paid) {
@@ -355,18 +384,18 @@ export async function POST(req: Request) {
       }
 
       try {
-        await markCardsSoldOrDecrementStock(stockItems);
+        await finalizeInventoryAfterPayment(stockItems);
       } catch (stockErr: any) {
-        // Stock update failed — order exists but inventory not updated
+        // Status transition failed — stock is correct but status may be stale
         // Flag for manual review rather than crashing (payment already succeeded)
-        console.error("Stock decrement failed after order creation:", stockErr);
+        console.error("Inventory finalization failed after order creation:", stockErr);
         await Order.updateOne(
           { _id: order._id },
           {
             $set: {
-              notes: "NEEDS REVIEW: Stock decrement failed after payment. " +
+              notes: "NEEDS REVIEW: Inventory status finalization failed after payment. " +
                      `Error: ${stockErr?.message || "unknown"}. ` +
-                     "Verify inventory manually.",
+                     "Verify inventory status manually.",
             },
           }
         );

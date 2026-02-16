@@ -10,6 +10,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/requireAdmin";
+import { logAdminAction } from "@/lib/auditLog";
 import dbConnect from "@/lib/dbConnect";
 import Order from "@/models/Order";
 import { generateOrderConfirmationEmail } from "@/lib/emails/orderConfirmation";
@@ -19,8 +20,9 @@ import { getResend, EMAIL_FROM, EMAIL_FROM_NAME, SITE_URL } from "@/lib/emailCon
 
 export async function POST(req: NextRequest) {
   try {
-    const adminResult = await requireAdmin();
+    const adminResult = await requireAdmin(req, { limit: 10 });
     if (adminResult instanceof NextResponse) return adminResult;
+    const session = adminResult;
 
     const body = await req.json();
     const { orderId, emailType } = body;
@@ -99,6 +101,22 @@ export async function POST(req: NextRequest) {
     }
 
     console.log(`✅ ${emailType} email sent:`, emailResult.data.id);
+
+    // Audit log
+    logAdminAction({
+      adminId: session.user.id,
+      adminEmail: session.user.email,
+      action: "ORDER_EMAIL_SENT",
+      targetType: "order",
+      targetId: orderId,
+      metadata: {
+        orderNumber,
+        emailType,
+        recipientEmail: orderObj.email,
+        emailId: emailResult.data.id,
+      },
+      req,
+    });
 
     return NextResponse.json({
       success: true,

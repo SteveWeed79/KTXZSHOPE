@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/requireAdmin";
+import { requireStepUpAuth } from "@/lib/stepUpAuth";
+import { logAdminAction } from "@/lib/auditLog";
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
 
@@ -7,13 +9,17 @@ export async function PUT(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const adminResult = await requireAdmin();
+  const adminResult = await requireAdmin(req, { limit: 10 });
   if (adminResult instanceof NextResponse) return adminResult;
 
   await dbConnect();
 
   const { id } = await params;
-  const { role } = await req.json();
+  const { role, confirmPassword } = await req.json();
+
+  // Step-up auth required for role changes
+  const stepUpError = await requireStepUpAuth(adminResult, confirmPassword);
+  if (stepUpError) return stepUpError;
 
   if (role !== "admin" && role !== "customer") {
     return NextResponse.json(
@@ -39,19 +45,35 @@ export async function PUT(
   }
 
   // Prevent admin from demoting themselves
-  const session = adminResult;
-  if (session.user?.id === id && role === "customer") {
+  if (adminResult.user.id === id && role === "customer") {
     return NextResponse.json(
       { error: "You cannot revoke your own admin access." },
       { status: 403 }
     );
   }
 
+  const previousRole = targetUser.role;
+
   const updated = await User.findByIdAndUpdate(
     id,
     { role },
     { new: true, runValidators: true }
   ).select("name email role image createdAt");
+
+  // Audit log
+  logAdminAction({
+    adminId: adminResult.user.id,
+    adminEmail: adminResult.user.email,
+    action: "USER_ROLE_CHANGED",
+    targetType: "user",
+    targetId: id,
+    metadata: {
+      targetEmail: targetUser.email,
+      previousRole,
+      newRole: role,
+    },
+    req,
+  });
 
   return NextResponse.json({ user: updated });
 }
