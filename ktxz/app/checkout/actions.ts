@@ -89,7 +89,7 @@ export async function createCheckoutSession() {
 
   const cards = await Card.find({ _id: { $in: validIds } }).populate("brand").lean();
 
-  const cardsById = new Map<string, any>();
+  const cardsById = new Map<string, Record<string, unknown>>();
   for (const c of cards) cardsById.set(String(c._id), c);
 
   const now = new Date();
@@ -296,10 +296,11 @@ export async function createCheckoutSession() {
     // Next.js redirect() throws a special NEXT_REDIRECT error that must NOT be caught.
     const stripeUrl = checkoutSession.url;
     redirect(stripeUrl);
-  } catch (e: any) {
+  } catch (e: unknown) {
     // Next.js redirect() works by throwing. Don't cancel the reservation for redirects.
+    const typedE = e as { digest?: string; message?: string };
     const isRedirect =
-      e?.digest?.startsWith?.("NEXT_REDIRECT") || e?.message === "NEXT_REDIRECT";
+      typedE?.digest?.startsWith?.("NEXT_REDIRECT") || typedE?.message === "NEXT_REDIRECT";
     if (isRedirect) throw e;
 
     // Actual error: roll back atomic stock decrements and cancel reservation

@@ -87,7 +87,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email: userDoc.email,
           name: userDoc.name ?? undefined,
           role: userDoc.role ?? "customer",
-        } as any;
+        } as Record<string, unknown>;
       },
     }),
   ],
@@ -108,7 +108,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           const dbUser = await findOrCreateOAuthUser({
             email,
             name: user?.name ?? null,
-            image: (user as any)?.image ?? null,
+            image: (user as Record<string, unknown>)?.image ?? null,
           });
 
           token.id = dbUser._id.toString();
@@ -138,9 +138,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user && typeof token.id === "string" && token.id.length > 0) {
         try {
           // avoid repeat work if NextAuth calls jwt multiple times in a single flow
-          if (!(token as any).cartMerged) {
+          if (!(token as Record<string, unknown>).cartMerged) {
             await mergeCookieCartIntoUserCart(token.id);
-            (token as any).cartMerged = true;
+            (token as Record<string, unknown>).cartMerged = true;
           }
         } catch (err) {
           console.error("Cart merge error on login:", err);
@@ -152,8 +152,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
     async session({ session, token }) {
       if (session.user) {
-        (session.user as any).id = typeof token.id === "string" ? token.id : undefined;
-        (session.user as any).role = typeof token.role === "string" ? token.role : undefined;
+        (session.user as Record<string, unknown>).id = typeof token.id === "string" ? token.id : undefined;
+        (session.user as Record<string, unknown>).role = typeof token.role === "string" ? token.role : undefined;
         // keep email as NextAuth already does
       }
       return session;

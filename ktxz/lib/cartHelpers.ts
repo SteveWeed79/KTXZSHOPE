@@ -20,7 +20,6 @@ import {
   setCartItem as setCookieCartItem,
   removeCartItem as removeCookieCartItem,
   clearCart as clearCookieCart,
-  type CookieCart,
 } from "@/lib/cartCookie";
 import Reservation from "@/models/Reservation";
 
@@ -49,7 +48,7 @@ export async function loadCart(userId: string | null): Promise<UnifiedCart> {
 
     if (dbCart) {
       return {
-        items: dbCart.items.map((item: any) => ({
+        items: dbCart.items.map((item: Record<string, unknown>) => ({
           cardId: String(item.card),
           qty: Number(item.quantity || 1),
         })),
@@ -105,7 +104,7 @@ export async function setCartItemQuantity(
     if (cart) {
       // Cart exists - update or add item
       const existingIndex = cart.items.findIndex(
-        (item: any) => String(item.card) === cardId
+        (item: Record<string, unknown>) => String(item.card) === cardId
       );
 
       if (existingIndex >= 0) {
@@ -169,7 +168,7 @@ export async function removeFromCart(
     const cart = await Cart.findOne({ user: userId });
     if (!cart) return;
 
-    cart.items = cart.items.filter((item: any) => String(item.card) !== cardId);
+    cart.items = cart.items.filter((item: Record<string, unknown>) => String(item.card) !== cardId);
     cart.lastActiveAt = new Date();
     await cart.save();
   } else {
@@ -234,7 +233,7 @@ export async function mergeCookieCartIntoUserCart(userId: string): Promise<void>
   if (cookieCart.items.length === 0) return; // Nothing to merge
 
   // Load or create user cart
-  let userCart = await Cart.findOne({ user: userId });
+  const userCart = await Cart.findOne({ user: userId });
 
   if (!userCart) {
     // Create new cart with cookie items
@@ -250,7 +249,7 @@ export async function mergeCookieCartIntoUserCart(userId: string): Promise<void>
     // Merge cookie items into existing cart
     for (const cookieItem of cookieCart.items) {
       const existingIndex = userCart.items.findIndex(
-        (item: any) => String(item.card) === cookieItem.cardId
+        (item: Record<string, unknown>) => String(item.card) === cookieItem.cardId
       );
 
       if (existingIndex >= 0) {

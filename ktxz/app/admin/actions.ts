@@ -183,7 +183,7 @@ export async function updateCard(formData: FormData) {
 
   const cardId = validateObjectId(rawData.cardId, "Card ID");
 
-  const update: any = {};
+  const update: Record<string, unknown> = {};
 
   if (rawData.brandId !== undefined || rawData.brand !== undefined) {
     update.brand = validateObjectId(rawData.brandId ?? rawData.brand, "Category");

@@ -151,7 +151,7 @@ export default async function CheckoutSuccessPage({
     await clearCart(userId);
   }
 
-  const lineItems = (session as any).line_items?.data ?? [];
+  const lineItems = (session as unknown as { line_items?: { data?: Array<Record<string, unknown>> } }).line_items?.data ?? [];
   const amountTotal = typeof session.amount_total === "number" ? session.amount_total : 0;
   const amountSubtotal = typeof session.amount_subtotal === "number" ? session.amount_subtotal : 0;
   const amountTax =
@@ -197,14 +197,16 @@ export default async function CheckoutSuccessPage({
                   </p>
                 </div>
               ) : (
-                lineItems.map((li: any, idx: number) => {
-                  const name = li?.price?.product?.name || li?.description || `Item ${idx + 1}`;
-                  const qty = li?.quantity || 1;
+                lineItems.map((li: Record<string, unknown>, idx: number) => {
+                  const liPrice = li?.price as Record<string, unknown> | undefined;
+                  const liProduct = liPrice?.product as Record<string, unknown> | undefined;
+                  const name = (liProduct?.name as string) || (li?.description as string) || `Item ${idx + 1}`;
+                  const qty = (li?.quantity as number) || 1;
                   const amount = typeof li?.amount_total === "number" ? li.amount_total : 0;
 
                   return (
                     <div
-                      key={li?.id || idx}
+                      key={(li?.id as string) || idx}
                       className="border border-border bg-card rounded-2xl p-5 flex items-start justify-between gap-4"
                     >
                       <div>

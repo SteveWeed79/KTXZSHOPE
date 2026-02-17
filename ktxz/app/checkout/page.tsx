@@ -21,23 +21,26 @@ export default async function CheckoutPage() {
   const ids = items.map((i) => i.cardId).filter(Boolean);
   const cards = await Card.find({ _id: { $in: ids } }).populate("brand").lean();
 
-  const cardsById = new Map<string, any>();
+  type LeanCard = Record<string, unknown> & { isActive?: boolean; status?: string; inventoryType?: string; stock?: number; price?: number; _id: unknown; name?: string; image?: string; rarity?: string; brand?: { name?: string } };
+
+  const cardsById = new Map<string, Record<string, unknown>>();
   for (const c of cards) cardsById.set(String(c._id), c);
 
   const rows = items
     .map((it) => {
       const card = cardsById.get(it.cardId);
       if (!card) return null;
-      const isInactive = (card as any).isActive === false || (card as any).status === "inactive";
-      const isSold = (card as any).status === "sold";
-      const inventoryType = (card as any).inventoryType || "single";
+      const leanCard = card as LeanCard;
+      const isInactive = leanCard.isActive === false || leanCard.status === "inactive";
+      const isSold = leanCard.status === "sold";
+      const inventoryType = leanCard.inventoryType || "single";
       const isBulk = inventoryType === "bulk";
-      const stock = typeof (card as any).stock === "number" ? (card as any).stock : 1;
+      const stock = typeof leanCard.stock === "number" ? leanCard.stock : 1;
       const canBuy = !isInactive && !isSold && (!isBulk || stock > 0);
       const qty = !isBulk ? 1 : Math.max(1, Math.min(it.qty || 1, stock));
-      return { card, qty, canBuy };
+      return { card: leanCard, qty, canBuy };
     })
-    .filter(Boolean) as Array<{ card: any; qty: number; canBuy: boolean }>;
+    .filter(Boolean) as Array<{ card: LeanCard; qty: number; canBuy: boolean }>;
 
   if (rows.length === 0) redirect("/cart");
 

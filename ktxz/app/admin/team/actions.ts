@@ -15,7 +15,7 @@ async function checkAdmin() {
 }
 
 export async function promoteToAdmin(formData: FormData) {
-  const session = await checkAdmin();
+  await checkAdmin();
   await dbConnect();
 
   const userId = formData.get("userId") as string;

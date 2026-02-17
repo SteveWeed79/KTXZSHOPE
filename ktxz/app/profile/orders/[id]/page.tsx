@@ -75,7 +75,6 @@ export default async function OrderDetailPage({
   const items = order.items || [];
   const amounts = order.amounts || { subtotal: 0, tax: 0, shipping: 0, total: 0 };
   const shippingAddr = order.shippingAddress || {};
-  const billingAddr = order.billingAddress || {};
 
   return (
     <main className="section-spacing max-w-6xl mx-auto">
@@ -117,7 +116,7 @@ export default async function OrderDetailPage({
             </h2>
 
             <div className="space-y-4">
-              {items.map((item: any, idx: number) => (
+              {(items as Array<{ name: string; image?: string; rarity?: string; brandName?: string; unitPrice: number; quantity: number }>).map((item, idx) => (
                 <div
                   key={idx}
                   className="flex items-start gap-4 border-b border-border pb-4 last:border-b-0 last:pb-0"
@@ -147,7 +146,7 @@ export default async function OrderDetailPage({
                       {item.name}
                     </p>
                     <p className="text-muted-foreground text-[10px] font-mono uppercase tracking-[0.3em] mt-1">
-                      {item.rarity} // {item.brandName}
+                      {item.rarity} {"//"} {item.brandName}
                     </p>
                     <p className="text-muted-foreground text-[10px] font-mono uppercase tracking-[0.3em] mt-2">
                       Qty: {item.quantity}

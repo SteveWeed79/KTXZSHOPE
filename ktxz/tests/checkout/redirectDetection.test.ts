@@ -7,8 +7,10 @@ import { describe, it, expect } from "vitest";
  * The fix: Check if the error is a redirect before cancelling.
  */
 
-function isNextRedirect(e: any): boolean {
-  return e?.digest?.startsWith?.("NEXT_REDIRECT") || e?.message === "NEXT_REDIRECT";
+function isNextRedirect(e: unknown): boolean {
+  const err = e as Record<string, unknown> | null | undefined;
+  const digest = err?.digest as string | undefined;
+  return digest?.startsWith?.("NEXT_REDIRECT") === true || err?.message === "NEXT_REDIRECT";
 }
 
 describe("Next.js redirect detection", () => {
@@ -45,10 +47,10 @@ describe("Checkout reservation lifecycle", () => {
 
     try {
       // Simulate redirect throwing NEXT_REDIRECT
-      const redirectError: any = new Error("NEXT_REDIRECT");
+      const redirectError = new Error("NEXT_REDIRECT") as Error & { digest?: string };
       redirectError.digest = `NEXT_REDIRECT;${stripeUrl}`;
       throw redirectError;
-    } catch (e: any) {
+    } catch (e: unknown) {
       const isRedirect = isNextRedirect(e);
       if (isRedirect) {
         // Re-throw without cancelling
@@ -65,7 +67,7 @@ describe("Checkout reservation lifecycle", () => {
 
     try {
       throw new Error("Stripe API rate limited");
-    } catch (e: any) {
+    } catch (e: unknown) {
       const isRedirect = isNextRedirect(e);
       if (!isRedirect) {
         reservationCancelled = true;

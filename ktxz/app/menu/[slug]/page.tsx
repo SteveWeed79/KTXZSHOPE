@@ -69,7 +69,7 @@ export default async function MenuPage({
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 grid-spacing">
-            {cards.map((card: any) => (
+            {(cards as Array<{ _id: { toString(): string }; name: string; image?: string; price: number; rarity?: string; brand?: { name: string } | null; isVault?: boolean; vaultExpiryDate?: string | Date | null }>).map((card) => (
               <ProductCard
                 key={card._id.toString()}
                 card={{

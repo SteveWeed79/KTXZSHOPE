@@ -4,7 +4,9 @@ import Card from "@/models/Card";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { addToCart } from "./cartActions";
-import { ArrowLeft, ShoppingCart } from "lucide-react";
+import { ShoppingCart } from "lucide-react";
+
+type PopulatedBrand = { _id: unknown; name: string };
 
 export default async function CardPage({
   params,
@@ -32,10 +34,10 @@ export default async function CardPage({
           </Link>
           <span>/</span>
           <Link
-            href={`/shop?brand=${(card.brand as any)._id}`}
+            href={`/shop?brand=${(card.brand as PopulatedBrand)._id}`}
             className="hover:text-foreground transition-colors"
           >
-            {(card.brand as any).name}
+            {(card.brand as PopulatedBrand).name}
           </Link>
           <span>/</span>
           <span className="text-foreground">{card.name}</span>
@@ -52,7 +54,7 @@ export default async function CardPage({
 
           <div className="flex flex-col justify-center">
             <span className="text-primary font-mono tracking-widest uppercase text-xs mb-2">
-              {(card.brand as any).name} / {card.rarity}
+              {(card.brand as PopulatedBrand).name} / {card.rarity}
             </span>
 
             <h1 className="text-5xl md:text-7xl brand-heading mb-4">{card.name}</h1>
@@ -80,7 +82,7 @@ export default async function CardPage({
               <p className="text-foreground/80">
                 {card.description
                   ? card.description
-                  : `A certified ${card.rarity} collectible from the ${(card.brand as any).name} set. Stored in a smoke-free environment in a top-loader.`}
+                  : `A certified ${card.rarity} collectible from the ${(card.brand as PopulatedBrand).name} set. Stored in a smoke-free environment in a top-loader.`}
               </p>
             </div>
 

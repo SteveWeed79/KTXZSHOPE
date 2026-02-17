@@ -64,7 +64,7 @@ export default async function Navbar() {
             {brands.length === 0 ? (
               <span className="tracking-normal uppercase text-xs">No brands yet</span>
             ) : (
-              brands.map((b: any, idx: number) => (
+              brands.map((b: Record<string, unknown>, idx: number) => (
                 <span key={String(b._id)} className="whitespace-nowrap">
                   <span className="hover:text-foreground transition-colors">{b.name}</span>
                   {idx < brands.length - 1 && (

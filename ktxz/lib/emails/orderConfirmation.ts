@@ -44,8 +44,6 @@ function formatPrice(cents: number): string {
 }
 
 export function generateOrderConfirmationEmail(order: OrderData, siteUrl: string) {
-  const orderUrl = `${siteUrl}/admin/orders/${order.orderNumber}`;
-  
   const html = `
 <!DOCTYPE html>
 <html>

@@ -20,11 +20,13 @@ export async function addToCart(formData: FormData) {
   const card = await Card.findById(cardId).lean();
   if (!card) redirect("/shop");
 
-  const isInactive = (card as any).isActive === false || (card as any).status === "inactive";
-  const isSold = (card as any).status === "sold";
-  const inventoryType = (card as any).inventoryType || "single";
+  type LeanCard = { isActive?: boolean; status?: string; inventoryType?: string; stock?: number };
+  const leanCard = card as LeanCard;
+  const isInactive = leanCard.isActive === false || leanCard.status === "inactive";
+  const isSold = leanCard.status === "sold";
+  const inventoryType = leanCard.inventoryType || "single";
   const isBulk = inventoryType === "bulk";
-  const stock = typeof (card as any).stock === "number" ? (card as any).stock : 1;
+  const stock = typeof leanCard.stock === "number" ? leanCard.stock : 1;
 
   const canBuy = !isInactive && !isSold && (!isBulk || stock > 0);
   if (!canBuy) redirect(`/card/${cardId}`);

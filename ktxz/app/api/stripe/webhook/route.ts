@@ -10,7 +10,7 @@
  * - Sends confirmation emails automatically
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import dbConnect from "@/lib/dbConnect";
 import mongoose from "mongoose";
@@ -56,8 +56,8 @@ async function claimStripeEventOnce(eventId: string) {
   );
 
   const upsertedCount =
-    typeof (res as any).upsertedCount === "number" ? (res as any).upsertedCount : undefined;
-  const upsertedId = (res as any).upsertedId;
+    typeof (res as Record<string, unknown>).upsertedCount === "number" ? (res as Record<string, unknown>).upsertedCount : undefined;
+  const upsertedId = (res as Record<string, unknown>).upsertedId;
 
   const inserted = upsertedCount !== undefined ? upsertedCount > 0 : !!upsertedId;
   return { alreadyClaimed: !inserted };
@@ -90,7 +90,7 @@ async function finalizeInventoryAfterPayment(items: Array<{ cardId: string; qty:
     if (singleResult) continue;
 
     // Bulk items: check if stock hit zero, mark sold if so
-    const card = await Card.findById(it.cardId).select("inventoryType stock").lean() as any;
+    const card = await Card.findById(it.cardId).select("inventoryType stock").lean() as Record<string, unknown>;
     if (card && card.inventoryType === "bulk" && card.stock <= 0) {
       await Card.updateOne(
         { _id: it.cardId, stock: { $lte: 0 } },
@@ -127,7 +127,7 @@ async function restoreReservedStock(reservationId: string) {
   }
 }
 
-async function sendOrderConfirmationEmail(order: any) {
+async function sendOrderConfirmationEmail(order: Record<string, unknown>) {
   try {
     const orderNumber = order.orderNumber;
     
@@ -175,8 +175,8 @@ export async function POST(req: Request) {
     let event: Stripe.Event;
     try {
       event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
-    } catch (err: any) {
-      console.error("Stripe signature verification failed:", err?.message);
+    } catch (err: unknown) {
+      console.error("Stripe signature verification failed:", (err as Error)?.message);
       return NextResponse.json(
         { error: "Webhook signature verification failed" },
         { status: 400 }
@@ -271,8 +271,8 @@ export async function POST(req: Request) {
       const unitAmountCents =
         typeof li.price?.unit_amount === "number"
           ? li.price.unit_amount
-          : typeof (li as any).amount_total === "number"
-            ? Math.round(((li as any).amount_total as number) / Math.max(1, qty))
+          : typeof (li as Record<string, unknown>).amount_total === "number"
+            ? Math.round(((li as Record<string, unknown>).amount_total as number) / Math.max(1, qty))
             : 0;
 
       const unitPrice = fromCents(unitAmountCents);
@@ -302,7 +302,7 @@ export async function POST(req: Request) {
     const user = await User.findOne({ email }).select("_id").lean();
 
     // Addresses
-    const shippingDetails = (session as any).shipping_details as
+    const shippingDetails = (session as Stripe.Checkout.Session & { shipping_details?: { name?: string; address?: Stripe.Address | null } }).shipping_details as
       | { name?: string; address?: Stripe.Address | null }
       | null
       | undefined;
@@ -328,7 +328,7 @@ export async function POST(req: Request) {
     // If order creation fails, unclaim the event so Stripe retries.
     // If stock decrement fails, flag the order for manual review.
 
-    let order: any;
+    let order: InstanceType<typeof Order>;
     try {
       order = await Order.create({
         user: user?._id,
@@ -361,7 +361,7 @@ export async function POST(req: Request) {
           ? "Paid via Stripe. Awaiting fulfillment."
           : "Checkout completed but not marked paid yet.",
       });
-    } catch (orderErr: any) {
+    } catch (orderErr: unknown) {
       // Order creation failed — unclaim event so Stripe will retry
       console.error("Order creation failed, unclaiming event for retry:", orderErr);
       await unclaimStripeEvent(event.id);
@@ -387,7 +387,7 @@ export async function POST(req: Request) {
 
       try {
         await finalizeInventoryAfterPayment(stockItems);
-      } catch (stockErr: any) {
+      } catch (stockErr: unknown) {
         // Status transition failed — stock is correct but status may be stale
         // Flag for manual review rather than crashing (payment already succeeded)
         console.error("Inventory finalization failed after order creation:", stockErr);
@@ -396,7 +396,7 @@ export async function POST(req: Request) {
           {
             $set: {
               notes: "NEEDS REVIEW: Inventory status finalization failed after payment. " +
-                     `Error: ${stockErr?.message || "unknown"}. ` +
+                     `Error: ${(stockErr as Error)?.message || "unknown"}. ` +
                      "Verify inventory status manually.",
             },
           }
@@ -420,7 +420,7 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ received: true });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Webhook error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }

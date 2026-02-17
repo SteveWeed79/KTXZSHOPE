@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, use } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { StatusStepper } from "@/components/StatusStepper";
-import { Printer, Mail, Package, Send } from "lucide-react";
+import { Printer, Mail, Send } from "lucide-react";
 
 interface Order {
   _id: string;
