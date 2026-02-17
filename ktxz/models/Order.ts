@@ -143,5 +143,4 @@ OrderSchema.pre("save", async function () {
 
 const Order = models.Order || model("Order", OrderSchema);
 
-export { getNextOrderNumber };
 export default Order;

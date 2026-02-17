@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Download, Package, Clock, CreditCard, DollarSign } from "lucide-react";
+import { getStatusColor } from "@/lib/formatters";
 
 interface Order {
   _id: string;
@@ -23,14 +24,6 @@ interface Order {
 }
 
 type StatusFilter = "all" | "pending" | "paid" | "fulfilled" | "cancelled" | "refunded";
-
-const STATUS_COLORS: Record<string, string> = {
-  pending: "bg-primary/10 text-primary/70 border-primary/20",
-  paid: "bg-primary/10 text-primary border-primary/30",
-  fulfilled: "bg-muted text-foreground border-border",
-  cancelled: "bg-muted text-muted-foreground border-border",
-  refunded: "bg-muted text-muted-foreground border-border",
-};
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -380,7 +373,7 @@ export default function AdminOrdersPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
-                        className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${STATUS_COLORS[order.status] || ""}`}
+                        className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(order.status)}`}
                       >
                         {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                       </span>

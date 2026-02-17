@@ -5,10 +5,7 @@ import Card from "@/models/Card";
 import { auth } from "@/auth";
 import { loadCart } from "@/lib/cartHelpers";
 import { Trash2 } from "lucide-react";
-
-function money(n: number) {
-  return `$${n.toFixed(2)}`;
-}
+import { formatMoney } from "@/lib/formatters";
 
 export default async function CartPage() {
   const session = await auth();
@@ -131,7 +128,7 @@ export default async function CartPage() {
                           {r.brandName} &middot; {r.rarity}
                         </p>
                         <p className="text-foreground font-bold mt-2">
-                          {money(r.price)}
+                          {formatMoney(r.price)}
                         </p>
                       </div>
 
@@ -187,7 +184,7 @@ export default async function CartPage() {
                           Line Total
                         </p>
                         <p className="text-foreground font-bold">
-                          {money(r.lineTotal)}
+                          {formatMoney(r.lineTotal)}
                         </p>
                       </div>
                     </div>
@@ -213,7 +210,7 @@ export default async function CartPage() {
 
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Subtotal</span>
-                <span className="text-foreground font-bold">{money(subtotal)}</span>
+                <span className="text-foreground font-bold">{formatMoney(subtotal)}</span>
               </div>
 
               <p className="text-[10px] text-muted-foreground leading-relaxed mt-4">

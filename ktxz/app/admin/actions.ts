@@ -65,11 +65,12 @@ function checkboxToBool(value: FormDataEntryValue | undefined, defaultValue = fa
   return value === "on" || value === "true" || value === "1";
 }
 
-async function checkAdmin() {
+export async function checkAdmin() {
   const session = await auth();
   if (!isAdminUser(session?.user as { email?: string; role?: string })) {
-    throw new Error("Unauthorized Access Required.");
+    throw new Error("Unauthorized.");
   }
+  return session!;
 }
 
 /**

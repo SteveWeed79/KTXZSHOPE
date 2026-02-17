@@ -4,6 +4,7 @@ import Card from "@/models/Card";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import ProductCard from "@/components/ProductCard";
+import { PUBLIC_INVENTORY_FILTER } from "@/lib/cardAvailability";
 
 export default async function MenuPage({
   params,
@@ -18,17 +19,7 @@ export default async function MenuPage({
 
   const cards = await Card.find({
     brand: brand._id,
-    $and: [
-      { isActive: { $ne: false } },
-      { $or: [{ status: { $exists: false } }, { status: "active" }] },
-      {
-        $or: [
-          { inventoryType: { $exists: false } },
-          { inventoryType: "single" },
-          { inventoryType: "bulk", stock: { $gt: 0 } },
-        ],
-      },
-    ],
+    ...PUBLIC_INVENTORY_FILTER,
   })
     .populate("brand")
     .sort({ createdAt: -1 })

@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { getCartItemQuantity, setCartItemQuantity } from "@/lib/cartHelpers";
 import { checkActionRateLimit } from "@/lib/rateLimit";
+import { canPurchaseCard } from "@/lib/cardAvailability";
 
 export async function addToCart(formData: FormData) {
   // Rate limit: 30 add-to-cart per minute per IP
@@ -20,16 +21,12 @@ export async function addToCart(formData: FormData) {
   const card = await Card.findById(cardId).lean();
   if (!card) redirect("/shop");
 
-  type LeanCard = { isActive?: boolean; status?: string; inventoryType?: string; stock?: number };
-  const leanCard = card as LeanCard;
-  const isInactive = leanCard.isActive === false || leanCard.status === "inactive";
-  const isSold = leanCard.status === "sold";
+  const leanCard = card as { isActive?: boolean; status?: string; inventoryType?: string; stock?: number };
+  if (!canPurchaseCard(leanCard)) redirect(`/card/${cardId}`);
+
   const inventoryType = leanCard.inventoryType || "single";
   const isBulk = inventoryType === "bulk";
   const stock = typeof leanCard.stock === "number" ? leanCard.stock : 1;
-
-  const canBuy = !isInactive && !isSold && (!isBulk || stock > 0);
-  if (!canBuy) redirect(`/card/${cardId}`);
 
   // Get user ID if logged in
   const session = await auth();

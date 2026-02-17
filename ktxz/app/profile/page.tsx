@@ -4,16 +4,7 @@ import User from "@/models/User";
 import Order from "@/models/Order";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-
-function formatDate(date: Date | string | undefined | null) {
-  if (!date) return "--";
-  const d = new Date(date);
-  return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
-}
-
-function formatMoney(amount: number) {
-  return `$${amount.toFixed(2)}`;
-}
+import { formatDateShort, formatMoney } from "@/lib/formatters";
 
 export default async function ProfilePage() {
   const session = await auth();
@@ -116,7 +107,7 @@ export default async function ProfilePage() {
                           Order #{orderId.slice(-8)}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {formatDate(order.createdAt)} &middot; {itemCount} item{itemCount !== 1 ? "s" : ""}
+                          {formatDateShort(order.createdAt)} &middot; {itemCount} item{itemCount !== 1 ? "s" : ""}
                         </p>
                       </div>
                       <div className="text-right shrink-0">

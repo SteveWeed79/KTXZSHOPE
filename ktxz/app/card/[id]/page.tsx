@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { addToCart } from "./cartActions";
 import { ShoppingCart } from "lucide-react";
+import { canPurchaseCard } from "@/lib/cardAvailability";
 
 type PopulatedBrand = { _id: unknown; name: string };
 
@@ -26,7 +27,7 @@ export default async function CardPage({
   const isSold = card.status === "sold";
   const isBulk = card.inventoryType === "bulk";
   const stock = typeof card.stock === "number" ? card.stock : 1;
-  const canBuy = !isInactive && !isSold && (!isBulk || stock > 0);
+  const canBuy = canPurchaseCard(card);
 
   return (
     <div className="min-h-screen py-12 md:py-24">

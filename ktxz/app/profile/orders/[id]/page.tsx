@@ -14,33 +14,7 @@ import { redirect, notFound } from "next/navigation";
 import dbConnect from "@/lib/dbConnect";
 import Order from "@/models/Order";
 import Link from "next/link";
-
-function formatDate(date: Date | string | undefined | null) {
-  if (!date) return "—";
-  const d = new Date(date);
-  return d.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function formatMoney(amount: number) {
-  return `$${amount.toFixed(2)}`;
-}
-
-function getStatusColor(status: string) {
-  const colors = {
-    pending: "text-primary/70 bg-primary/10 border-primary/20",
-    paid: "text-primary bg-primary/10 border-primary/30",
-    fulfilled: "text-foreground bg-muted border-border",
-    cancelled: "text-muted-foreground bg-muted border-border",
-    refunded: "text-muted-foreground bg-muted border-border",
-  };
-  return colors[status as keyof typeof colors] || colors.pending;
-}
+import { formatDateLong, formatMoney, getStatusColor } from "@/lib/formatters";
 
 export default async function OrderDetailPage({
   params,
@@ -98,7 +72,7 @@ export default async function OrderDetailPage({
             </span>
           </div>
           <p className="text-muted-foreground font-mono text-[10px] tracking-[0.3em] uppercase">
-            Placed: {formatDate(order.createdAt)}
+            Placed: {formatDateLong(order.createdAt)}
           </p>
         </div>
 
@@ -203,7 +177,7 @@ export default async function OrderDetailPage({
                       Shipped
                     </span>
                     <span className="text-[10px] text-foreground font-mono">
-                      {formatDate(order.fulfilledAt)}
+                      {formatDateLong(order.fulfilledAt)}
                     </span>
                   </div>
                 )}
@@ -287,7 +261,7 @@ export default async function OrderDetailPage({
                         Payment Confirmed
                       </p>
                       <p className="text-[9px] text-muted-foreground font-mono">
-                        {formatDate(order.paidAt)}
+                        {formatDateLong(order.paidAt)}
                       </p>
                     </div>
                   </div>
@@ -301,7 +275,7 @@ export default async function OrderDetailPage({
                         Order Shipped
                       </p>
                       <p className="text-[9px] text-muted-foreground font-mono">
-                        {formatDate(order.fulfilledAt)}
+                        {formatDateLong(order.fulfilledAt)}
                       </p>
                     </div>
                   </div>
@@ -315,7 +289,7 @@ export default async function OrderDetailPage({
                         Order Cancelled
                       </p>
                       <p className="text-[9px] text-muted-foreground font-mono">
-                        {formatDate(order.cancelledAt)}
+                        {formatDateLong(order.cancelledAt)}
                       </p>
                     </div>
                   </div>
@@ -329,7 +303,7 @@ export default async function OrderDetailPage({
                         Payment Refunded
                       </p>
                       <p className="text-[9px] text-muted-foreground font-mono">
-                        {formatDate(order.refundedAt)}
+                        {formatDateLong(order.refundedAt)}
                       </p>
                     </div>
                   </div>
