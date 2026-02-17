@@ -94,7 +94,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
   callbacks: {
     /**
-     * JWT is the source of truth for middleware authorization.
+     * JWT is the source of truth for proxy authorization.
      * We ensure token.id + token.role ALWAYS come from MongoDB by email.
      */
     async jwt({ token, user, account }) {

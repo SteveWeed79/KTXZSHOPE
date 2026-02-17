@@ -166,11 +166,8 @@ No GitHub Actions workflows, no deployment pipeline.
 
 ## 9. Additional Observations
 
-### Next.js Deprecation Warning
-```
-The "middleware" file convention is deprecated. Please use "proxy" instead.
-```
-The `middleware.ts` file should be migrated to the new Next.js 16 "proxy" convention.
+### Next.js Proxy Migration
+~~The "middleware" file convention is deprecated.~~ **Resolved** — `middleware.ts` has been renamed to `proxy.ts` with the exported function renamed to `proxy`. The deprecation warning no longer appears in build output.
 
 ### Dual lockfile warning
 ```

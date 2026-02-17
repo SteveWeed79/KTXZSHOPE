@@ -6,7 +6,7 @@ export const authConfig = {
     signIn: "/login",
   },
   callbacks: {
-    // Do NOT gate here. Middleware handles /admin and /profile.
+    // Do NOT gate here. Proxy handles /admin and /profile.
     authorized() {
       return true;
     },
