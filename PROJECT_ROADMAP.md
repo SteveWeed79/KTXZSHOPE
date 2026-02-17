@@ -61,9 +61,9 @@ These items fix existing issues and harden what's already built.
 - [ ] **Resolve npm audit vulnerability**
   - Run `npm audit` to identify the high-severity issue and apply fix
 
-- [ ] **Migrate from deprecated `middleware.ts` to `proxy` convention**
-  - Next.js 16 has deprecated the middleware file convention
-  - See: https://nextjs.org/docs/messages/middleware-to-proxy
+- [x] **Migrate from deprecated `middleware.ts` to `proxy` convention**
+  - Renamed `middleware.ts` → `proxy.ts`, exported function `middleware` → `proxy`
+  - Deprecation warning eliminated from build output
 
 - [ ] **Add proper TypeScript types**
   - Review `types/` directory and ensure all shared interfaces are defined

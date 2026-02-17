@@ -1,4 +1,4 @@
-// ktxz/middleware.ts
+// ktxz/proxy.ts
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
@@ -8,7 +8,7 @@ function secret() {
   return process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET ?? "";
 }
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   const isAdminRoute = pathname.startsWith("/admin");
