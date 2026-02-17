@@ -86,7 +86,7 @@ export default async function ShopPage({
   const marketplaceCards = (rawCards as LeanCard[]).map((card) => {
     // Strip vault flags from expired vault cards so they display as normal cards
     const vaultExpired =
-      card.isVault && card.vaultExpiryDate && new Date(card.vaultExpiryDate as string | number) < now;
+      card.isVault && card.vaultExpiryDate && new Date(card.vaultExpiryDate) < now;
 
     return {
       _id: String(card._id),
