@@ -11,7 +11,7 @@ type VaultAutoRefreshProps = {
 
 function toMillis(value: VaultAutoRefreshProps["events"][number]): number | null {
   if (!value) return null;
-  const t = new Date(value as any).getTime();
+  const t = new Date(value as string | number | Date).getTime();
   return Number.isFinite(t) ? t : null;
 }
 

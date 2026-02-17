@@ -59,8 +59,8 @@ export async function POST(req: Request) {
     const card = await Card.findById(cardId).lean();
     if (!card) return redirectToCart(req, "error=missing-item");
 
-    const inventoryType = ((card as any).inventoryType || "single") as "single" | "bulk";
-    const stockRaw = (card as any).stock;
+    const inventoryType = ((card as Record<string, unknown>).inventoryType || "single") as "single" | "bulk";
+    const stockRaw = (card as Record<string, unknown>).stock;
     const stock = typeof stockRaw === "number" && Number.isFinite(stockRaw) ? Math.trunc(stockRaw) : 0;
 
     let finalQty = 1;

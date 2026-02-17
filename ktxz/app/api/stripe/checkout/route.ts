@@ -101,7 +101,7 @@ export async function POST(req: Request) {
           throw Object.assign(new Error(`Card not found: ${cardId}`), { statusCode: 404 });
         }
 
-        const inventoryType = (card as any).inventoryType || "single";
+        const inventoryType = (card as Record<string, unknown>).inventoryType || "single";
 
         if (inventoryType === "single") {
           // Atomically reserve a single card — only succeeds if active + stock >= 1
@@ -139,8 +139,8 @@ export async function POST(req: Request) {
                 images: card.image ? [String(card.image)] : [],
                 metadata: {
                   cardId: String(card._id),
-                  brand: String((card as any).brand?.name || ""),
-                  rarity: String((card as any).rarity || ""),
+                  brand: String((card as Record<string, unknown> & { brand?: { name?: string } }).brand?.name || ""),
+                  rarity: String((card as Record<string, unknown>).rarity || ""),
                   inventoryType: "single",
                 },
               },
@@ -167,7 +167,7 @@ export async function POST(req: Request) {
 
         if (!reserved) {
           // Re-read to give a helpful error message
-          const current = await Card.findById(cardId).select("stock name status isActive").lean() as any;
+          const current = await Card.findById(cardId).select("stock name status isActive").lean() as Record<string, unknown> | null;
           if (!current || current.status === "sold" || !current.isActive) {
             throw Object.assign(
               new Error(`Item unavailable: ${card.name}`),
@@ -195,8 +195,8 @@ export async function POST(req: Request) {
               images: card.image ? [String(card.image)] : [],
               metadata: {
                 cardId: String(card._id),
-                brand: String((card as any).brand?.name || ""),
-                rarity: String((card as any).rarity || ""),
+                brand: String((card as Record<string, unknown> & { brand?: { name?: string } }).brand?.name || ""),
+                rarity: String((card as Record<string, unknown>).rarity || ""),
                 inventoryType: "bulk",
               },
             },
@@ -204,13 +204,14 @@ export async function POST(req: Request) {
         });
         reservationItems.push({ card: card._id, quantity: qty });
       }
-    } catch (reserveErr: any) {
+    } catch (reserveErr: unknown) {
       // Roll back any stock we already reserved for earlier items
       await rollbackReservedStock(reservedCards);
-      if (reserveErr.statusCode) {
+      const typedErr = reserveErr as { statusCode?: number; message?: string };
+      if (typedErr.statusCode) {
         return NextResponse.json(
-          { error: reserveErr.message },
-          { status: reserveErr.statusCode }
+          { error: typedErr.message },
+          { status: typedErr.statusCode }
         );
       }
       throw reserveErr;

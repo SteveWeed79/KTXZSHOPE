@@ -82,8 +82,8 @@ export default async function Home() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {vaultCards.map((card: any) => (
-                <ProductCard key={card._id.toString()} card={card} />
+              {(vaultCards as Array<{ _id: { toString(): string }; name: string; image?: string; price: number; rarity?: string; brand?: { name: string } | null; isVault?: boolean; vaultExpiryDate?: string | Date | null }>).map((card) => (
+                <ProductCard key={card._id.toString()} card={{ ...card, _id: card._id.toString() }} />
               ))}
             </div>
           </div>

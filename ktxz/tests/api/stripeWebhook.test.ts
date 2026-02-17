@@ -13,9 +13,11 @@ function moneyFromCents(cents: number): string {
 
 // --- Extracted line item mapping ---
 
-function extractLineItemInfo(li: any): { name: string; qty: number; amount: number } {
-  const name = li?.price?.product?.name || li?.description || "Unknown Item";
-  const qty = li?.quantity || 1;
+function extractLineItemInfo(li: Record<string, unknown> | null | undefined): { name: string; qty: number; amount: number } {
+  const liPrice = li?.price as Record<string, unknown> | undefined;
+  const liProduct = liPrice?.product as Record<string, unknown> | undefined;
+  const name = (liProduct?.name as string) || (li?.description as string) || "Unknown Item";
+  const qty = (li?.quantity as number) || 1;
   const amount = typeof li?.amount_total === "number" ? li.amount_total : 0;
   return { name, qty, amount };
 }

@@ -19,7 +19,7 @@ export default async function ShopPage({
   const currentPage = Math.max(1, parseInt(filters.page || "1", 10) || 1);
   const skip = (currentPage - 1) * CARDS_PER_PAGE;
 
-  const publicInventoryFilter: any = {
+  const publicInventoryFilter: Record<string, unknown> = {
     $and: [
       { isActive: { $ne: false } },
       { $or: [{ status: { $exists: false } }, { status: "active" }] },
@@ -35,14 +35,14 @@ export default async function ShopPage({
 
   // Show: non-vault cards OR vault cards whose vault period has ended
   // Hide: vault cards currently live (shown on homepage) and unreleased vault cards
-  const vaultVisibilityFilter: any = {
+  const vaultVisibilityFilter: Record<string, unknown> = {
     $or: [
       { isVault: { $ne: true } },
       { isVault: true, vaultExpiryDate: { $exists: true, $lt: now } },
     ],
   };
 
-  const query: any = {
+  const query: { $and: Record<string, unknown>[] } = {
     $and: [publicInventoryFilter, vaultVisibilityFilter],
   };
 
@@ -63,12 +63,12 @@ export default async function ShopPage({
 
   const totalPages = Math.max(1, Math.ceil(totalCards / CARDS_PER_PAGE));
 
-  const brands = rawBrands.map((brand: any) => ({
+  const brands = rawBrands.map((brand: Record<string, unknown>) => ({
     ...brand,
     _id: brand._id.toString(),
   }));
 
-  const marketplaceCards = rawCards.map((card: any) => {
+  const marketplaceCards = rawCards.map((card: Record<string, unknown>) => {
     // Strip vault flags from expired vault cards so they display as normal cards
     const vaultExpired =
       card.isVault && card.vaultExpiryDate && new Date(card.vaultExpiryDate) < now;
@@ -118,7 +118,7 @@ export default async function ShopPage({
           {marketplaceCards.length > 0 ? (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 grid-spacing">
-                {marketplaceCards.map((card: any) => (
+                {marketplaceCards.map((card: Record<string, unknown>) => (
                   <ProductCard key={card._id} card={card} />
                 ))}
               </div>

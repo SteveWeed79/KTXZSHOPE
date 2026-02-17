@@ -78,7 +78,7 @@ describe("Card creation field mapping", () => {
 
 describe("Card update field mapping", () => {
   function mapUpdateFields(raw: Record<string, string | undefined>) {
-    const update: Record<string, any> = {};
+    const update: Record<string, unknown> = {};
 
     if (raw.inventoryType !== undefined) {
       const it = String(raw.inventoryType).toLowerCase();

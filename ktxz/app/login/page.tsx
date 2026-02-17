@@ -91,14 +91,14 @@ export default function AuthPage() {
     const email = String(formData.get("email") || "");
     const pass = String(formData.get("password") || "");
 
-    const result = await signUp(formData);
-    if ((result as any)?.error) {
-      setError((result as any).error);
+    const result = await signUp(formData) as { error?: string; success?: boolean };
+    if (result?.error) {
+      setError(result.error);
       setLoading(false);
       return;
     }
 
-    if ((result as any)?.success) {
+    if (result?.success) {
       const loginResult = await signIn("credentials", {
         email,
         password: pass,

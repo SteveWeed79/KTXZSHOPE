@@ -25,7 +25,9 @@ export default async function CartPage() {
     ? await Card.find({ _id: { $in: ids } }).populate("brand").lean()
     : [];
 
-  const cardMap = new Map<string, any>();
+  type CartRow = { cardId: string; name: string; image: string; price: number; brandName: string; rarity: string; inventoryType: string; stock: number; isActive: boolean; status: string; qty: number; lineTotal: number };
+
+  const cardMap = new Map<string, Record<string, unknown>>();
   for (const c of cardsRaw) cardMap.set(String(c._id), c);
 
   const rows = items
@@ -61,7 +63,7 @@ export default async function CartPage() {
         lineTotal,
       };
     })
-    .filter(Boolean) as Array<any>;
+    .filter(Boolean) as CartRow[];
 
   const subtotal = rows.reduce((sum, r) => sum + r.lineTotal, 0);
 

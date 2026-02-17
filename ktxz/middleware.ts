@@ -29,7 +29,7 @@ export async function middleware(req: NextRequest) {
   if (isProfileRoute) return NextResponse.next();
 
   // /admin/*
-  const role = typeof (token as any).role === "string" ? (token as any).role : undefined;
+  const role = typeof (token as Record<string, unknown>).role === "string" ? (token as Record<string, unknown>).role as string : undefined;
 
   if (role !== "admin") {
     const url = req.nextUrl.clone();

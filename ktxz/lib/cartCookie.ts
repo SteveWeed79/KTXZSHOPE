@@ -166,7 +166,7 @@ function cookieOptions(): CookieWriteOptions {
  * Read + normalize the cart from a Next cookies() store.
  * If missing/invalid, returns a fresh empty cart.
  */
-export function getCartFromCookies(cookieStore: { get: (...args: any[]) => any }): CookieCart {
+export function getCartFromCookies(cookieStore: { get: (name: string) => { value?: string } | undefined }): CookieCart {
   const raw = cookieStore.get(CART_COOKIE)?.value;
   return parseCartCookieValue(raw) ?? newCart();
 }
@@ -175,7 +175,7 @@ export function getCartFromCookies(cookieStore: { get: (...args: any[]) => any }
  * Persist a canonical cart back into the cookie.
  */
 export function saveCartToCookies(
-  cookieStore: { set: (...args: any[]) => any },
+  cookieStore: { set: (options: Record<string, unknown>) => void },
   cart: CookieCart
 ): void {
   const payload: CookieCart = {
@@ -189,13 +189,13 @@ export function saveCartToCookies(
     name: CART_COOKIE,
     value: JSON.stringify(payload),
     ...cookieOptions(),
-  } as any);
+  } as Record<string, unknown>);
 }
 
 /**
  * Remove the cookie entirely.
  */
-export function clearCartCookie(cookieStore: { set: (...args: any[]) => any }): void {
+export function clearCartCookie(cookieStore: { set: (options: Record<string, unknown>) => void }): void {
   // Put maxAge into a spread object so TS doesn't treat it as an "excess property"
   // on the object literal passed to the RequestCookie overload.
   const opts = { ...cookieOptions(), maxAge: 0 };
@@ -204,5 +204,5 @@ export function clearCartCookie(cookieStore: { set: (...args: any[]) => any }): 
     name: CART_COOKIE,
     value: "",
     ...opts,
-  } as any);
+  } as Record<string, unknown>);
 }

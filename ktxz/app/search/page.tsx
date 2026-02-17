@@ -7,7 +7,7 @@ function escapeRegex(str: string): string {
 }
 
 type SearchCard = {
-  _id: any;
+  _id: { toString(): string };
   name: string;
   rarity?: string;
   price?: number;

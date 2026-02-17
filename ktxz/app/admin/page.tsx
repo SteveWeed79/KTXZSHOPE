@@ -316,7 +316,7 @@ export default async function AdminPage() {
                           {card.name}
                         </h3>
                         <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-wider">
-                          {card.rarity} // {card.brand?.name}
+                          {card.rarity} {"//"} {card.brand?.name}
                         </p>
                       </div>
                     </div>

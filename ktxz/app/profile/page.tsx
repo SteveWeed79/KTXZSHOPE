@@ -98,7 +98,7 @@ export default async function ProfilePage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {recentOrders.map((order: any) => {
+              {(recentOrders as Array<{ _id: unknown; amounts?: { total?: number }; status?: string; items?: unknown[]; createdAt?: Date | string | null }>).map((order) => {
                 const orderId = String(order._id);
                 const total = order.amounts?.total || 0;
                 const status = order.status || "pending";

@@ -97,7 +97,7 @@ export default async function OrdersPage() {
       ) : (
         /* Order List */
         <div className="space-y-4">
-          {orders.map((order: any) => {
+          {(orders as Array<{ _id: unknown; amounts?: { total?: number }; items?: unknown[]; status?: string; createdAt?: Date | string | null; trackingNumber?: string }>).map((order) => {
             const orderId = String(order._id);
             const total = order.amounts?.total || 0;
             const itemCount = order.items?.length || 0;
@@ -127,7 +127,7 @@ export default async function OrdersPage() {
                     </div>
 
                     <p className="text-muted-foreground text-[10px] font-mono uppercase tracking-[0.3em]">
-                      {formatDate(createdAt)} // {itemCount} Item{itemCount !== 1 ? "s" : ""}
+                      {formatDate(createdAt)} {"//"} {itemCount} Item{itemCount !== 1 ? "s" : ""}
                     </p>
 
                     {/* Tracking Number (if available) */}

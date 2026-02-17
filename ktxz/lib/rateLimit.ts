@@ -142,9 +142,6 @@ export async function checkActionRateLimit(
   const identifier = getIdentifierFromHeaders(headerStore);
   const key = `${actionName}:${identifier}`;
 
-  const limiter = RateLimiters[limiterKey];
-  // Create a minimal Request-like object for the existing check method
-  const fakeReq = { headers: { get: (name: string) => headerStore.get(name) } } as unknown as Request;
   // Use a namespaced key to avoid collision across different actions
   const now = Date.now();
 
@@ -162,7 +159,7 @@ export async function checkActionRateLimit(
   };
 }
 
-export function rateLimitResponse(result: any) {
+export function rateLimitResponse(result: { limit: number; remaining: number; reset: number }) {
   return Response.json(
     {
       error: "Too many requests",
