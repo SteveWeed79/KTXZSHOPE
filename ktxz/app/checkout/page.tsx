@@ -79,7 +79,7 @@ export default async function CheckoutPage() {
                       <div className="aspect-[2.5/3.5] rounded-xl overflow-hidden border border-border bg-muted relative">
                         <Image
                           src={r.card.image || "/placeholder-card.png"}
-                          alt={r.card.name}
+                          alt={r.card.name || "Card"}
                           fill
                           sizes="64px"
                           className="object-cover"

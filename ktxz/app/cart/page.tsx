@@ -53,7 +53,7 @@ export default async function CartPage() {
         name: String(card.name),
         image: String(card.image || ""),
         price: Number(card.price),
-        brandName: String(card.brand?.name || ""),
+        brandName: String((card.brand as { name?: string } | null)?.name || ""),
         rarity: String(card.rarity || ""),
         inventoryType: String(inventoryType),
         stock,

@@ -175,7 +175,8 @@ export function getCartFromCookies(cookieStore: { get: (name: string) => { value
  * Persist a canonical cart back into the cookie.
  */
 export function saveCartToCookies(
-  cookieStore: { set: (options: Record<string, unknown>) => void },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  cookieStore: { set: (...args: any[]) => any },
   cart: CookieCart
 ): void {
   const payload: CookieCart = {
@@ -195,7 +196,8 @@ export function saveCartToCookies(
 /**
  * Remove the cookie entirely.
  */
-export function clearCartCookie(cookieStore: { set: (options: Record<string, unknown>) => void }): void {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function clearCartCookie(cookieStore: { set: (...args: any[]) => any }): void {
   // Put maxAge into a spread object so TS doesn't treat it as an "excess property"
   // on the object literal passed to the RequestCookie overload.
   const opts = { ...cookieOptions(), maxAge: 0 };

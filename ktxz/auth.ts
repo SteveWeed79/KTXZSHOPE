@@ -108,7 +108,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           const dbUser = await findOrCreateOAuthUser({
             email,
             name: user?.name ?? null,
-            image: (user as Record<string, unknown>)?.image ?? null,
+            image: ((user as Record<string, unknown>)?.image as string | null) ?? null,
           });
 
           token.id = dbUser._id.toString();
@@ -152,8 +152,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
     async session({ session, token }) {
       if (session.user) {
-        (session.user as Record<string, unknown>).id = typeof token.id === "string" ? token.id : undefined;
-        (session.user as Record<string, unknown>).role = typeof token.role === "string" ? token.role : undefined;
+        (session.user as unknown as Record<string, unknown>).id = typeof token.id === "string" ? token.id : undefined;
+        (session.user as unknown as Record<string, unknown>).role = typeof token.role === "string" ? token.role : undefined;
         // keep email as NextAuth already does
       }
       return session;

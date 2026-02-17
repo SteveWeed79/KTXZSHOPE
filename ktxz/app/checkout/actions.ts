@@ -191,16 +191,17 @@ export async function createCheckoutSession() {
 
     reservationItems.push({ card: new mongoose.Types.ObjectId(String(card._id)), quantity: qty });
 
+    const brandObj = card.brand as { name?: string } | null | undefined;
     lineItems.push({
       price_data: {
         currency: "usd",
         product_data: {
-          name: card.name,
-          description: card.description || undefined,
-          images: card.image ? [card.image] : undefined,
+          name: String(card.name || "Item"),
+          description: (card.description as string) || undefined,
+          images: card.image ? [String(card.image)] : undefined,
           metadata: {
             cardId: String(card._id),
-            brand: card.brand?.name ? String(card.brand.name) : "",
+            brand: brandObj?.name ? String(brandObj.name) : "",
             rarity: card.rarity ? String(card.rarity) : "",
             inventoryType: String(inventoryType),
           },
