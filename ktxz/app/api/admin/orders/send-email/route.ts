@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
 
     if (emailType === "confirmation") {
       emailSubject = `Order Confirmation #${orderNumber} - KTXZ`;
-      emailContent = generateOrderConfirmationEmail(orderData, SITE_URL);
+      emailContent = generateOrderConfirmationEmail(orderData as Parameters<typeof generateOrderConfirmationEmail>[0], SITE_URL);
     } else if (emailType === "shipping") {
       emailSubject = `Your Order Has Shipped #${orderNumber} - KTXZ`;
       emailContent = generateShippingNotificationEmail(orderData as unknown as Parameters<typeof generateShippingNotificationEmail>[0], SITE_URL);

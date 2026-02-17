@@ -78,27 +78,26 @@ export default async function ShopPage({
 
   const totalPages = Math.max(1, Math.ceil(totalCards / CARDS_PER_PAGE));
 
-  const brands = (rawBrands as LeanBrand[]).map((brand) => ({
+  const brands: Array<{ _id: string; name: string }> = (rawBrands as LeanBrand[]).map((brand) => ({
     _id: String(brand._id),
-    name: brand.name,
+    name: String(brand.name || ""),
   }));
 
   const marketplaceCards = (rawCards as LeanCard[]).map((card) => {
     // Strip vault flags from expired vault cards so they display as normal cards
     const vaultExpired =
-      card.isVault && card.vaultExpiryDate && new Date(card.vaultExpiryDate) < now;
+      card.isVault && card.vaultExpiryDate && new Date(card.vaultExpiryDate as string | number) < now;
 
     return {
       _id: String(card._id),
-      name: card.name,
+      name: String(card.name || ""),
       image: card.image,
-      price: card.price,
+      price: Number(card.price || 0),
       rarity: card.rarity,
-      brand: card.brand ? { name: card.brand.name } : null,
+      brand: card.brand ? { name: String(card.brand.name || "") } : null,
       // Clear vault display for expired cards — shoppers just see a normal listing
       isVault: vaultExpired ? false : card.isVault,
-      vaultReleaseDate: vaultExpired ? null : (card.vaultReleaseDate instanceof Date ? card.vaultReleaseDate.toISOString() : card.vaultReleaseDate),
-      vaultExpiryDate: vaultExpired ? null : (card.vaultExpiryDate instanceof Date ? card.vaultExpiryDate.toISOString() : card.vaultExpiryDate),
+      vaultExpiryDate: vaultExpired ? null : (card.vaultExpiryDate instanceof Date ? card.vaultExpiryDate.toISOString() : (card.vaultExpiryDate as string | null | undefined)),
     };
   });
 

@@ -191,6 +191,7 @@ export async function createCheckoutSession() {
 
     reservationItems.push({ card: new mongoose.Types.ObjectId(String(card._id)), quantity: qty });
 
+    const brandObj = card.brand as { name?: string } | null | undefined;
     lineItems.push({
       price_data: {
         currency: "usd",
