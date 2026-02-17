@@ -13,7 +13,7 @@
 | Dependencies installed | PASS   | 558 packages, all resolved                           |
 | TypeScript type check  | PASS   | `tsc --noEmit` — zero errors (1 fixed this session)  |
 | Tests (Vitest)         | PASS   | 144 tests across 12 suites, all passing              |
-| ESLint                 | PASS   | 1 error, 2 warnings (down from 102 errors)           |
+| ESLint                 | PASS   | 0 errors, 0 warnings                                |
 | Production build       | WARN   | Compiles OK; page data collection needs `MONGODB_URI`|
 | npm audit              | WARN   | 10 moderate-severity vulnerabilities (dev-only, eslint/ajv) |
 | Environment config     | WARN   | No `.env.local` present                              |
@@ -78,16 +78,14 @@ Test suites:
 
 ## 4. ESLint
 
-**Status: PASS (with minor issues) — 1 error, 2 warnings**
+**Status: PASS — 0 errors, 0 warnings**
 
-| Rule | Count | Severity | File |
-|------|-------|----------|------|
-| `react-hooks/set-state-in-effect` | 1 | error | `checkout/success/PendingPaymentRefresh.tsx:22` |
-| `@typescript-eslint/no-unused-vars` | 2 | warning | `stripe/webhook/route.ts`, `checkout/actions.ts` |
+All ESLint issues resolved:
+- Removed unused `resAny` variable from `stripe/webhook/route.ts`
+- Removed unused `brandObj` variable from `checkout/actions.ts`
+- Refactored `PendingPaymentRefresh.tsx` to derive `stopped` from `polls >= MAX_POLLS` instead of using separate state (eliminates `setStopped` in effect body)
 
-The `set-state-in-effect` error is a legitimate pattern concern (calling `setStopped(true)` inside a useEffect). The two unused vars (`resAny`, `brandObj`) are dead code that should be cleaned up.
-
-**Improvement:** Down from 102 errors + 10 warnings to 1 error + 2 warnings since last check.
+**Improvement:** Down from 102 errors + 10 warnings to 0 errors + 0 warnings.
 
 ---
 
@@ -117,21 +115,25 @@ All 10 vulnerabilities trace to `ajv <8.18.0` (ReDoS), which is a transitive dep
 
 ### Application-level security issues (from `plan.md`)
 
+**ALL 13 ISSUES RESOLVED** (verified 2026-02-17)
+
 | Priority | Issue | Status |
 |----------|-------|--------|
-| Critical | NoSQL injection in search — regex not escaped | Open |
-| Critical | Cron endpoint open when `CRON_SECRET` not set | Open |
-| Critical | Unauthenticated Stripe session on checkout success | Open |
-| High | Password reset missing complexity validation | Open |
-| High | Missing rate limiting on server actions | Open |
-| High | Rate limiter IP spoofing via `X-Forwarded-For` | Open |
-| High | Webhook errors leak internal details | Open |
-| Medium | Duplicate `requireAdmin` implementations | Open |
-| Medium | Admin orders endpoint has no pagination | Open |
-| Medium | Seed endpoint NODE_ENV check fragile | Open |
-| Medium | Email template HTML injection risk | Open |
-| Low | signUp missing email validation | Open |
-| Low | Mongoose ObjectIds unchecked in admin actions | Open |
+| Critical | NoSQL injection in search — regex escaped via `escapeRegex()` | Resolved |
+| Critical | Cron endpoint — returns 401 when `CRON_SECRET` not set | Resolved |
+| Critical | Checkout success — session ownership validation (user + guest) | Resolved |
+| High | Password reset — `PASSWORD_REGEX` validation applied | Resolved |
+| High | Rate limiting — `checkActionRateLimit()` on all server actions | Resolved |
+| High | Rate limiter — hardened IP extraction with trust hierarchy | Resolved |
+| High | Webhook — generic error response, details logged server-side | Resolved |
+| Medium | `requireAdmin` — consolidated to single canonical implementation | Resolved |
+| Medium | Admin orders — pagination with page/limit params (max 100) | Resolved |
+| Medium | Seed endpoint — blocks unless `NODE_ENV === "development"` | Resolved |
+| Medium | Email templates — `escapeHtml()` applied to URLs | Resolved |
+| Low | signUp — `EMAIL_REGEX` validation added | Resolved |
+| Low | Admin actions — `validateObjectId()` on all ObjectId inputs | Resolved |
+
+**Remaining:** CSP header (noted in plan.md #8) — security headers exist but a full Content-Security-Policy has not been added yet.
 
 ---
 
@@ -184,7 +186,8 @@ The root `package-lock.json` is a stub. Consider removing it or configuring `tur
 
 - All 144 tests pass
 - TypeScript compiles cleanly (zero errors)
-- ESLint is nearly clean (1 error, 2 warnings — non-blocking)
+- ESLint fully clean (0 errors, 0 warnings)
+- All 13 security issues from audit resolved
 - Core features implemented: auth, catalog, cart, checkout, admin, vault system
 - No high-severity npm vulnerabilities
 
@@ -195,7 +198,5 @@ The root `package-lock.json` is a stub. Consider removing it or configuring `tur
 
 ### Should fix before production
 
-1. **13 open security issues** (3 critical, 4 high) documented in `plan.md`
+1. **Add Content-Security-Policy header** — other security headers exist but CSP not yet configured
 2. **Middleware deprecation** — migrate `middleware.ts` to Next.js 16 proxy convention
-3. **2 unused variables** — `resAny` in webhook route, `brandObj` in checkout actions
-4. **1 ESLint error** — `setStopped` in effect body (`PendingPaymentRefresh.tsx`)

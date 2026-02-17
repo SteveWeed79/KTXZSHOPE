@@ -55,7 +55,6 @@ async function claimStripeEventOnce(eventId: string) {
     { upsert: true }
   );
 
-  const resAny = res as unknown as Record<string, unknown>;
   const upsertedCount =
     typeof (res as unknown as Record<string, unknown>).upsertedCount === "number" ? (res as unknown as Record<string, unknown>).upsertedCount : undefined;
   const upsertedId = (res as unknown as Record<string, unknown>).upsertedId;

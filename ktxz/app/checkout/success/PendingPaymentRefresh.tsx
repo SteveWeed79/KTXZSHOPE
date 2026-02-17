@@ -14,14 +14,11 @@ const MAX_POLLS = 60; // stop after ~5 minutes
 export default function PendingPaymentRefresh() {
   const router = useRouter();
   const [polls, setPolls] = useState(0);
-  const [stopped, setStopped] = useState(false);
+
+  const stopped = polls >= MAX_POLLS;
 
   useEffect(() => {
     if (stopped) return;
-    if (polls >= MAX_POLLS) {
-      setStopped(true);
-      return;
-    }
 
     const timer = setTimeout(() => {
       setPolls((p) => p + 1);
@@ -36,10 +33,7 @@ export default function PendingPaymentRefresh() {
       <p className="text-[10px] text-muted-foreground uppercase font-mono mt-4">
         Still waiting for payment confirmation.{" "}
         <button
-          onClick={() => {
-            setStopped(false);
-            setPolls(0);
-          }}
+          onClick={() => setPolls(0)}
           className="text-primary hover:underline"
         >
           Retry
