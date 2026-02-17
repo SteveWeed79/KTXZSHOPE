@@ -1,4 +1,5 @@
 import Image from "next/image";
+import mongoose from "mongoose";
 import dbConnect from "@/lib/dbConnect";
 import Card from "@/models/Card";
 import { notFound } from "next/navigation";
@@ -15,6 +16,8 @@ export default async function CardPage({
 }) {
   await dbConnect();
   const { id } = await params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) notFound();
 
   const card = await Card.findById(id).populate("brand");
   if (!card) notFound();

@@ -72,14 +72,14 @@ export async function POST(req: NextRequest) {
 
     const orderObj = order as Record<string, unknown>;
     const orderNumber = orderObj.orderNumber || orderId;
-    const orderData = { ...orderObj, orderNumber };
+    const orderData = { ...orderObj, orderNumber } as Parameters<typeof generateOrderConfirmationEmail>[0];
 
     if (emailType === "confirmation") {
       emailSubject = `Order Confirmation #${orderNumber} - KTXZ`;
       emailContent = generateOrderConfirmationEmail(orderData, SITE_URL);
     } else if (emailType === "shipping") {
       emailSubject = `Your Order Has Shipped #${orderNumber} - KTXZ`;
-      emailContent = generateShippingNotificationEmail(orderData, SITE_URL);
+      emailContent = generateShippingNotificationEmail(orderData as unknown as Parameters<typeof generateShippingNotificationEmail>[0], SITE_URL);
     }
 
     // Send email via Resend

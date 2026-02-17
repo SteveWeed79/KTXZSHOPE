@@ -49,9 +49,13 @@ export default async function OrdersPage() {
   await dbConnect();
 
   const userId = session.user?.id;
+  const userEmail = session.user?.email?.toLowerCase() ?? "";
 
-  // Load all orders for this user, sorted by newest first
-  const orders = await Order.find({ user: userId })
+  // Load all orders for this user (by account link OR email match for guest orders)
+  const orderQuery = userId
+    ? { $or: [{ user: userId }, ...(userEmail ? [{ email: userEmail }] : [])] }
+    : { email: userEmail };
+  const orders = await Order.find(orderQuery)
     .sort({ createdAt: -1 })
     .lean();
 

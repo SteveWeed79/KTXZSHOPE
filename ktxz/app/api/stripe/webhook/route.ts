@@ -56,10 +56,10 @@ async function claimStripeEventOnce(eventId: string) {
   );
 
   const upsertedCount =
-    typeof (res as Record<string, unknown>).upsertedCount === "number" ? (res as Record<string, unknown>).upsertedCount : undefined;
-  const upsertedId = (res as Record<string, unknown>).upsertedId;
+    typeof (res as unknown as Record<string, unknown>).upsertedCount === "number" ? (res as unknown as Record<string, unknown>).upsertedCount : undefined;
+  const upsertedId = (res as unknown as Record<string, unknown>).upsertedId;
 
-  const inserted = upsertedCount !== undefined ? upsertedCount > 0 : !!upsertedId;
+  const inserted = upsertedCount != null ? Number(upsertedCount) > 0 : !!upsertedId;
   return { alreadyClaimed: !inserted };
 }
 
@@ -91,7 +91,7 @@ async function finalizeInventoryAfterPayment(items: Array<{ cardId: string; qty:
 
     // Bulk items: check if stock hit zero, mark sold if so
     const card = await Card.findById(it.cardId).select("inventoryType stock").lean() as Record<string, unknown>;
-    if (card && card.inventoryType === "bulk" && card.stock <= 0) {
+    if (card && card.inventoryType === "bulk" && Number(card.stock) <= 0) {
       await Card.updateOne(
         { _id: it.cardId, stock: { $lte: 0 } },
         { $set: { status: "sold", isActive: false } }
@@ -129,19 +129,19 @@ async function restoreReservedStock(reservationId: string) {
 
 async function sendOrderConfirmationEmail(order: Record<string, unknown>) {
   try {
-    const orderNumber = order.orderNumber;
-    
+    const orderNumber = String(order.orderNumber ?? "");
+
     const emailContent = generateOrderConfirmationEmail(
       {
         ...order,
         orderNumber,
-      },
+      } as Parameters<typeof generateOrderConfirmationEmail>[0],
       SITE_URL
     );
 
     const result = await getResend().emails.send({
       from: `${EMAIL_FROM_NAME} <${EMAIL_FROM}>`,
-      to: order.email,
+      to: order.email as string,
       subject: `Order Confirmation #${orderNumber} - KTXZ`,
       html: emailContent.html,
       text: emailContent.text,
@@ -271,8 +271,8 @@ export async function POST(req: Request) {
       const unitAmountCents =
         typeof li.price?.unit_amount === "number"
           ? li.price.unit_amount
-          : typeof (li as Record<string, unknown>).amount_total === "number"
-            ? Math.round(((li as Record<string, unknown>).amount_total as number) / Math.max(1, qty))
+          : typeof (li as unknown as Record<string, unknown>).amount_total === "number"
+            ? Math.round(((li as unknown as Record<string, unknown>).amount_total as number) / Math.max(1, qty))
             : 0;
 
       const unitPrice = fromCents(unitAmountCents);

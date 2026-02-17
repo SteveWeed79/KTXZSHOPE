@@ -66,7 +66,7 @@ export default async function Navbar() {
             ) : (
               brands.map((b: Record<string, unknown>, idx: number) => (
                 <span key={String(b._id)} className="whitespace-nowrap">
-                  <span className="hover:text-foreground transition-colors">{b.name}</span>
+                  <span className="hover:text-foreground transition-colors">{String(b.name)}</span>
                   {idx < brands.length - 1 && (
                     <span className="mx-2 text-border/80">•</span>
                   )}
