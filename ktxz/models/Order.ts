@@ -124,6 +124,8 @@ const OrderSchema = new Schema(
       default: "pending",
     },
     emailError: { type: String, default: "" },
+    // Tracks when the shipping notification was sent to prevent duplicate sends
+    shippingEmailSentAt: { type: Date },
   },
   { timestamps: true }
 );

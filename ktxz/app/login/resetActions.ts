@@ -3,12 +3,10 @@
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
 import crypto from "crypto";
-import { Resend } from "resend";
 import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 import { checkActionRateLimit } from "@/lib/rateLimit";
-
-const resend = new Resend(process.env.RESEND_API_KEY);
+import { getResend, EMAIL_FROM, EMAIL_FROM_NAME } from "@/lib/emailConfig";
 
 const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d!@#$%^&*]{8,}$/;
 
@@ -44,8 +42,8 @@ export async function requestPasswordReset(formData: FormData) {
   const safeResetLink = escapeHtml(resetLink);
 
   try {
-    await resend.emails.send({
-      from: "KTXZ <onboarding@resend.dev>",
+    await getResend().emails.send({
+      from: `${EMAIL_FROM_NAME} <${EMAIL_FROM}>`,
       to: email,
       subject: "RECOVER YOUR ACCESS | KTXZ",
       html: `

@@ -61,11 +61,16 @@ export async function POST(req: NextRequest) {
 
     await order.save();
 
-    // Auto-send shipping notification if the order is already fulfilled and
-    // tracking info was just provided (covers the case where admin fulfills
-    // first and adds tracking later)
+    // Auto-send shipping notification if the order is already fulfilled, tracking
+    // info was just provided, and the email hasn't been sent before.
+    // shippingEmailSentAt is the idempotency guard — once set, no re-send.
     let emailSent = false;
-    if (order.status === "fulfilled" && order.trackingNumber && order.carrier) {
+    if (
+      order.status === "fulfilled" &&
+      order.trackingNumber &&
+      order.carrier &&
+      !order.shippingEmailSentAt
+    ) {
       try {
         const orderData = order.toObject();
         const orderNumber = orderData.orderNumber || orderId;
@@ -85,6 +90,7 @@ export async function POST(req: NextRequest) {
         emailSent = !!result.data;
         if (result.data) {
           console.log(`✅ Shipping email sent to ${order.email}:`, result.data.id);
+          await Order.updateOne({ _id: order._id }, { $set: { shippingEmailSentAt: new Date() } });
         }
       } catch (emailErr) {
         console.error("Failed to send shipping email after tracking update:", emailErr);

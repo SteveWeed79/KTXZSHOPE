@@ -87,9 +87,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Auto-send shipping notification when fulfilled with tracking info
+    // Auto-send shipping notification when transitioning TO fulfilled with tracking info.
+    // Guard against re-sending if status was already fulfilled (e.g. admin submits twice).
     let emailSent = false;
-    if (status === "fulfilled" && order.trackingNumber && order.carrier) {
+    if (previousStatus !== "fulfilled" && status === "fulfilled" && order.trackingNumber && order.carrier) {
       try {
         const orderData = order.toObject();
         const orderNumber = orderData.orderNumber || orderId;
@@ -109,6 +110,7 @@ export async function POST(req: NextRequest) {
         emailSent = !!result.data;
         if (result.data) {
           console.log(`✅ Shipping email auto-sent to ${order.email}:`, result.data.id);
+          await Order.updateOne({ _id: order._id }, { $set: { shippingEmailSentAt: new Date() } });
         }
       } catch (emailErr) {
         console.error("Failed to auto-send shipping email:", emailErr);
