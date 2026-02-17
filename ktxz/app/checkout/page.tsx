@@ -7,6 +7,7 @@ import { auth } from "@/auth";
 import { loadCart } from "@/lib/cartHelpers";
 import { createCheckoutSession } from "./actions";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
+import { canPurchaseCard } from "@/lib/cardAvailability";
 
 export default async function CheckoutPage() {
   await dbConnect();
@@ -31,12 +32,10 @@ export default async function CheckoutPage() {
       const card = cardsById.get(it.cardId);
       if (!card) return null;
       const leanCard = card as LeanCard;
-      const isInactive = leanCard.isActive === false || leanCard.status === "inactive";
-      const isSold = leanCard.status === "sold";
       const inventoryType = leanCard.inventoryType || "single";
       const isBulk = inventoryType === "bulk";
       const stock = typeof leanCard.stock === "number" ? leanCard.stock : 1;
-      const canBuy = !isInactive && !isSold && (!isBulk || stock > 0);
+      const canBuy = canPurchaseCard(leanCard);
       const qty = !isBulk ? 1 : Math.max(1, Math.min(it.qty || 1, stock));
       return { card: leanCard, qty, canBuy };
     })

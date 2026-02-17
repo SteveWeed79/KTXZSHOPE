@@ -13,31 +13,7 @@ import { redirect } from "next/navigation";
 import dbConnect from "@/lib/dbConnect";
 import Order from "@/models/Order";
 import Link from "next/link";
-
-function formatDate(date: Date | string | undefined | null) {
-  if (!date) return "—";
-  const d = new Date(date);
-  return d.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function formatMoney(amount: number) {
-  return `$${amount.toFixed(2)}`;
-}
-
-function getStatusColor(status: string) {
-  const colors = {
-    pending: "text-primary/70 bg-primary/10 border-primary/20",
-    paid: "text-primary bg-primary/10 border-primary/30",
-    fulfilled: "text-foreground bg-muted border-border",
-    cancelled: "text-muted-foreground bg-muted border-border",
-    refunded: "text-muted-foreground bg-muted border-border",
-  };
-  return colors[status as keyof typeof colors] || colors.pending;
-}
+import { formatDateShort, formatMoney, getStatusColor } from "@/lib/formatters";
 
 export default async function OrdersPage() {
   const session = await auth();
@@ -131,7 +107,7 @@ export default async function OrdersPage() {
                     </div>
 
                     <p className="text-muted-foreground text-[10px] font-mono uppercase tracking-[0.3em]">
-                      {formatDate(createdAt)} {"//"} {itemCount} Item{itemCount !== 1 ? "s" : ""}
+                      {formatDateShort(createdAt)} {"//"} {itemCount} Item{itemCount !== 1 ? "s" : ""}
                     </p>
 
                     {/* Tracking Number (if available) */}

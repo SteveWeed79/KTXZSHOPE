@@ -3,16 +3,7 @@
 import { revalidatePath } from "next/cache";
 import dbConnect from "@/lib/dbConnect";
 import User from "@/models/User";
-import { auth } from "@/auth";
-import { isAdminUser } from "@/lib/isAdmin";
-
-async function checkAdmin() {
-  const session = await auth();
-  if (!isAdminUser(session?.user as { email?: string; role?: string })) {
-    throw new Error("Unauthorized.");
-  }
-  return session!;
-}
+import { checkAdmin } from "@/app/admin/actions";
 
 export async function promoteToAdmin(formData: FormData) {
   await checkAdmin();

@@ -3,10 +3,6 @@ import Stripe from "stripe";
 
 let cachedStripe: Stripe | null = null;
 
-export function isStripeConfigured(): boolean {
-  return !!process.env.STRIPE_SECRET_KEY;
-}
-
 /**
  * Safe accessor:
  * - Returns a Stripe client if STRIPE_SECRET_KEY is present

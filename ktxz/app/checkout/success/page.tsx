@@ -19,10 +19,7 @@ import { auth } from "@/auth";
 import { clearCart } from "@/lib/cartHelpers";
 import { getCartFromCookies } from "@/lib/cartCookie";
 import PendingPaymentRefresh from "./PendingPaymentRefresh";
-
-function money(cents: number) {
-  return `$${(cents / 100).toFixed(2)}`;
-}
+import { formatCents } from "@/lib/formatters";
 
 function AccessDenied() {
   return (
@@ -219,7 +216,7 @@ export default async function CheckoutSuccessPage({
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="text-foreground font-bold">{money(amount)}</p>
+                        <p className="text-foreground font-bold">{formatCents(amount)}</p>
                       </div>
                     </div>
                   );
@@ -236,15 +233,15 @@ export default async function CheckoutSuccessPage({
             <div className="border border-border bg-card rounded-2xl p-6 space-y-3">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Subtotal</span>
-                <span className="text-foreground font-bold">{money(amountSubtotal)}</span>
+                <span className="text-foreground font-bold">{formatCents(amountSubtotal)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Shipping</span>
-                <span className="text-foreground font-bold">{money(amountShipping)}</span>
+                <span className="text-foreground font-bold">{formatCents(amountShipping)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Tax</span>
-                <span className="text-foreground font-bold">{money(amountTax)}</span>
+                <span className="text-foreground font-bold">{formatCents(amountTax)}</span>
               </div>
 
               <div className="h-px bg-border my-2" />
@@ -253,7 +250,7 @@ export default async function CheckoutSuccessPage({
                 <span className="text-foreground font-black uppercase tracking-widest text-[10px]">
                   Total
                 </span>
-                <span className="text-foreground font-black">{money(amountTotal)}</span>
+                <span className="text-foreground font-black">{formatCents(amountTotal)}</span>
               </div>
             </div>
 

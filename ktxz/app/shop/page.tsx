@@ -4,6 +4,7 @@ import Brand from "@/models/Brand";
 import ProductCard from "@/components/ProductCard";
 import FilterSidebar from "@/components/FilterSidebar";
 import Link from "next/link";
+import { PUBLIC_INVENTORY_FILTER } from "@/lib/cardAvailability";
 
 type LeanBrand = { _id: unknown; name: string };
 type LeanCard = {
@@ -34,20 +35,6 @@ export default async function ShopPage({
   const currentPage = Math.max(1, parseInt(filters.page || "1", 10) || 1);
   const skip = (currentPage - 1) * CARDS_PER_PAGE;
 
-  const publicInventoryFilter: Record<string, unknown> = {
-    $and: [
-      { isActive: { $ne: false } },
-      { $or: [{ status: { $exists: false } }, { status: "active" }] },
-      {
-        $or: [
-          { inventoryType: { $exists: false } },
-          { inventoryType: "single" },
-          { inventoryType: "bulk", stock: { $gt: 0 } },
-        ],
-      },
-    ],
-  };
-
   // Show: non-vault cards OR vault cards whose vault period has ended
   // Hide: vault cards currently live (shown on homepage) and unreleased vault cards
   const vaultVisibilityFilter: Record<string, unknown> = {
@@ -58,7 +45,7 @@ export default async function ShopPage({
   };
 
   const query: { $and: Record<string, unknown>[] } = {
-    $and: [publicInventoryFilter, vaultVisibilityFilter],
+    $and: [PUBLIC_INVENTORY_FILTER, vaultVisibilityFilter],
   };
 
   if (filters.brand) {
@@ -86,7 +73,7 @@ export default async function ShopPage({
   const marketplaceCards = (rawCards as LeanCard[]).map((card) => {
     // Strip vault flags from expired vault cards so they display as normal cards
     const vaultExpired =
-      card.isVault && card.vaultExpiryDate && new Date(card.vaultExpiryDate as string | number) < now;
+      card.isVault && card.vaultExpiryDate && new Date(card.vaultExpiryDate) < now;
 
     return {
       _id: String(card._id),
