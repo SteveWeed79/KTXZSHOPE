@@ -196,12 +196,12 @@ export async function createCheckoutSession() {
       price_data: {
         currency: "usd",
         product_data: {
-          name: String(card.name || "Item"),
-          description: (card.description as string) || undefined,
+          name: String(card.name),
+          description: card.description ? String(card.description) : undefined,
           images: card.image ? [String(card.image)] : undefined,
           metadata: {
             cardId: String(card._id),
-            brand: brandObj?.name ? String(brandObj.name) : "",
+            brand: (card.brand as Record<string, unknown>)?.name ? String((card.brand as Record<string, unknown>).name) : "",
             rarity: card.rarity ? String(card.rarity) : "",
             inventoryType: String(inventoryType),
           },

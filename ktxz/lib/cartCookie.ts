@@ -190,7 +190,7 @@ export function saveCartToCookies(
     name: CART_COOKIE,
     value: JSON.stringify(payload),
     ...cookieOptions(),
-  } as Record<string, unknown>);
+  });
 }
 
 /**
@@ -206,5 +206,5 @@ export function clearCartCookie(cookieStore: { set: (...args: any[]) => any }): 
     name: CART_COOKIE,
     value: "",
     ...opts,
-  } as Record<string, unknown>);
+  });
 }

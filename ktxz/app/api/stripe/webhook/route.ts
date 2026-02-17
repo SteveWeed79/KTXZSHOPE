@@ -57,10 +57,10 @@ async function claimStripeEventOnce(eventId: string) {
 
   const resAny = res as unknown as Record<string, unknown>;
   const upsertedCount =
-    typeof resAny.upsertedCount === "number" ? resAny.upsertedCount : 0;
-  const upsertedId = resAny.upsertedId;
+    typeof (res as unknown as Record<string, unknown>).upsertedCount === "number" ? (res as unknown as Record<string, unknown>).upsertedCount : undefined;
+  const upsertedId = (res as unknown as Record<string, unknown>).upsertedId;
 
-  const inserted = upsertedCount > 0 || !!upsertedId;
+  const inserted = upsertedCount != null ? Number(upsertedCount) > 0 : !!upsertedId;
   return { alreadyClaimed: !inserted };
 }
 
@@ -92,7 +92,7 @@ async function finalizeInventoryAfterPayment(items: Array<{ cardId: string; qty:
 
     // Bulk items: check if stock hit zero, mark sold if so
     const card = await Card.findById(it.cardId).select("inventoryType stock").lean() as Record<string, unknown>;
-    if (card && card.inventoryType === "bulk" && (card.stock as number) <= 0) {
+    if (card && card.inventoryType === "bulk" && Number(card.stock) <= 0) {
       await Card.updateOne(
         { _id: it.cardId, stock: { $lte: 0 } },
         { $set: { status: "sold", isActive: false } }
@@ -130,7 +130,7 @@ async function restoreReservedStock(reservationId: string) {
 
 async function sendOrderConfirmationEmail(order: Record<string, unknown>) {
   try {
-    const orderNumber = String(order.orderNumber || "");
+    const orderNumber = String(order.orderNumber ?? "");
 
     const emailContent = generateOrderConfirmationEmail(
       {

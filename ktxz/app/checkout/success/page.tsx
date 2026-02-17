@@ -18,6 +18,7 @@ import { getStripe } from "@/lib/stripe";
 import { auth } from "@/auth";
 import { clearCart } from "@/lib/cartHelpers";
 import { getCartFromCookies } from "@/lib/cartCookie";
+import PendingPaymentRefresh from "./PendingPaymentRefresh";
 
 function money(cents: number) {
   return `$${(cents / 100).toFixed(2)}`;
@@ -181,6 +182,8 @@ export default async function CheckoutSuccessPage({
           >
             {paid ? "Status: Paid" : "Status: Not Paid"}
           </div>
+
+          {!paid && <PendingPaymentRefresh />}
         </div>
 
         <div className="mt-10 grid grid-cols-1 lg:grid-cols-12 grid-spacing">

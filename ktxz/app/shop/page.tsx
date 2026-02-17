@@ -5,13 +5,19 @@ import ProductCard from "@/components/ProductCard";
 import FilterSidebar from "@/components/FilterSidebar";
 import Link from "next/link";
 
-type LeanBrand = { _id: unknown; name?: string; [key: string]: unknown };
+type LeanBrand = { _id: unknown; name: string };
 type LeanCard = {
-  _id: unknown; name?: string; image?: string; price?: number;
-  rarity?: string; brand?: LeanBrand | null; isVault?: boolean;
-  vaultExpiryDate?: Date | string | null; vaultReleaseDate?: Date | string | null;
-  createdAt?: Date | string; updatedAt?: Date | string;
-  [key: string]: unknown;
+  _id: unknown;
+  name: string;
+  image?: string;
+  price: number;
+  rarity?: string;
+  brand?: LeanBrand | null;
+  isVault?: boolean;
+  vaultReleaseDate?: Date | null;
+  vaultExpiryDate?: Date | null;
+  createdAt?: Date;
+  updatedAt?: Date;
 };
 
 const CARDS_PER_PAGE = 24;

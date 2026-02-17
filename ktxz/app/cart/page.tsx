@@ -53,7 +53,7 @@ export default async function CartPage() {
         name: String(card.name),
         image: String(card.image || ""),
         price: Number(card.price),
-        brandName: String((card.brand as { name?: string } | null)?.name || ""),
+        brandName: String((card.brand as Record<string, unknown>)?.name || ""),
         rarity: String(card.rarity || ""),
         inventoryType: String(inventoryType),
         stock,
@@ -66,6 +66,9 @@ export default async function CartPage() {
     .filter(Boolean) as CartRow[];
 
   const subtotal = rows.reduce((sum, r) => sum + r.lineTotal, 0);
+  const hasUnavailable = rows.some(
+    (r) => !r.isActive || r.status === "sold" || (r.inventoryType === "bulk" && r.stock <= 0)
+  );
 
   return (
     <main className="min-h-[80vh] section-spacing max-w-6xl mx-auto">
@@ -218,10 +221,24 @@ export default async function CartPage() {
               </p>
 
               <form action="/api/cart/checkout" method="post" className="mt-6">
-                <button className="w-full btn-primary py-4">
+                <button
+                  disabled={hasUnavailable}
+                  aria-disabled={hasUnavailable}
+                  className={`w-full py-4 ${
+                    hasUnavailable
+                      ? "bg-muted text-muted-foreground cursor-not-allowed border border-border rounded-medium-soft font-bold"
+                      : "btn-primary"
+                  }`}
+                >
                   Secure Checkout
                 </button>
               </form>
+
+              {hasUnavailable && (
+                <p className="text-primary text-[10px] mt-3 text-center">
+                  Remove unavailable items to proceed.
+                </p>
+              )}
 
               <Link
                 href="/shop"
