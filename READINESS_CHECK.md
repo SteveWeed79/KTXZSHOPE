@@ -198,4 +198,4 @@ The root `package-lock.json` is a stub. Consider removing it or configuring `tur
 
 ### Should fix before production
 
-1. **Middleware deprecation** — migrate `middleware.ts` to Next.js 16 proxy convention
+No outstanding items. All security, code quality, and deprecation issues resolved.
