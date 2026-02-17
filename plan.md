@@ -54,7 +54,7 @@ After reading every API route, server action, model, middleware, and library fil
 
 **8. Missing Content-Security-Policy Header** (`next.config.ts`)
 - The app set X-Frame-Options, HSTS, etc., but no CSP header
-- **Status: NOTED** — CSP header should be added; other security headers are in place
+- **Status: RESOLVED** — Full CSP header added (lines 27-39) with directives: `default-src 'self'`, `script-src` (Stripe JS, Google OAuth), `style-src`, `img-src`, `connect-src`, `frame-src`, `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`
 
 **9. Duplicate `requireAdmin` Implementations** (`lib/requireAdmin.ts` vs `lib/authHelpers.ts`)
 - Two different `requireAdmin()` functions existed with different signatures

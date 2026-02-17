@@ -133,7 +133,7 @@ All 10 vulnerabilities trace to `ajv <8.18.0` (ReDoS), which is a transitive dep
 | Low | signUp — `EMAIL_REGEX` validation added | Resolved |
 | Low | Admin actions — `validateObjectId()` on all ObjectId inputs | Resolved |
 
-**Remaining:** CSP header (noted in plan.md #8) — security headers exist but a full Content-Security-Policy has not been added yet.
+**Note:** CSP header (plan.md #8) is also resolved — full Content-Security-Policy with 9 directives exists in `next.config.ts:27-39`. All 14 security findings are now closed.
 
 ---
 
@@ -198,5 +198,4 @@ The root `package-lock.json` is a stub. Consider removing it or configuring `tur
 
 ### Should fix before production
 
-1. **Add Content-Security-Policy header** — other security headers exist but CSP not yet configured
-2. **Middleware deprecation** — migrate `middleware.ts` to Next.js 16 proxy convention
+1. **Middleware deprecation** — migrate `middleware.ts` to Next.js 16 proxy convention
