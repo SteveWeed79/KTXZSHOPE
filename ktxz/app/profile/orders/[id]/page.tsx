@@ -57,11 +57,15 @@ export default async function OrderDetailPage({
 
   const { id } = await params;
   const userId = session.user?.id;
+  const userEmail = session.user?.email?.toLowerCase() ?? "";
 
-  // Load order and verify it belongs to this user
+  // Load order and verify it belongs to this user (by account link OR email for guest orders)
+  const ownerFilter = userId
+    ? { $or: [{ user: userId }, ...(userEmail ? [{ email: userEmail }] : [])] }
+    : { email: userEmail };
   const order = await Order.findOne({
     _id: id,
-    user: userId,
+    ...ownerFilter,
   })
     .populate("items.card")
     .lean();
