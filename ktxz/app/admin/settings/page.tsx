@@ -11,6 +11,7 @@ interface SiteSettings {
   isVaultLive: boolean;
   dropCountdown: string;
   maintenanceMode: boolean;
+  taxEnabled: boolean;
 }
 
 export default function AdminSettingsPage() {
@@ -22,6 +23,7 @@ export default function AdminSettingsPage() {
     isVaultLive: false,
     dropCountdown: "",
     maintenanceMode: false,
+    taxEnabled: true,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -42,6 +44,7 @@ export default function AdminSettingsPage() {
               ? new Date(data.settings.dropCountdown).toISOString().slice(0, 16)
               : "",
             maintenanceMode: data.settings.maintenanceMode || false,
+            taxEnabled: data.settings.taxEnabled !== false,
           });
         }
       })
@@ -178,6 +181,23 @@ export default function AdminSettingsPage() {
                 <span className="text-sm font-medium">Maintenance Mode</span>
                 <p className="text-xs text-muted-foreground">
                   Show maintenance page to visitors
+                </p>
+              </div>
+            </label>
+
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={settings.taxEnabled}
+                onChange={(e) =>
+                  setSettings({ ...settings, taxEnabled: e.target.checked })
+                }
+                className="rounded accent-primary"
+              />
+              <div>
+                <span className="text-sm font-medium">Tax Collection</span>
+                <p className="text-xs text-muted-foreground">
+                  Enable Stripe automatic tax (requires billing address). Disable for test mode.
                 </p>
               </div>
             </label>

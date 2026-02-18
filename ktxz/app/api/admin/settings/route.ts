@@ -35,6 +35,7 @@ export async function PUT(req: Request) {
       "isVaultLive",
       "dropCountdown",
       "maintenanceMode",
+      "taxEnabled",
     ];
 
     const update: Record<string, unknown> = {};

@@ -22,6 +22,7 @@ import { auth } from "@/auth";
 import { getStripe } from "@/lib/stripe";
 import { loadCart } from "@/lib/cartHelpers";
 import Reservation from "@/models/Reservation";
+import Settings from "@/models/Settings";
 import { checkActionRateLimit } from "@/lib/rateLimit";
 
 const HOLD_MINUTES = 10;
@@ -240,6 +241,9 @@ export async function createCheckoutSession() {
     items: reservationItems,
   });
 
+  const siteSettings = await Settings.getSettings();
+  const taxEnabled = siteSettings.taxEnabled !== false;
+
   try {
     const checkoutSession = await stripe.checkout.sessions.create({
       mode: "payment",
@@ -248,9 +252,9 @@ export async function createCheckoutSession() {
 
       customer_email: session?.user?.email || undefined,
 
-      billing_address_collection: "required",
+      billing_address_collection: taxEnabled ? "required" : "auto",
       shipping_address_collection: { allowed_countries: ["US"] },
-      automatic_tax: { enabled: true },
+      automatic_tax: { enabled: taxEnabled },
 
       shipping_options: [
         {
