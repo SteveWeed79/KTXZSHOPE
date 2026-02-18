@@ -38,6 +38,7 @@ export default function AdminOrdersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
 
+  const [totalOrderCount, setTotalOrderCount] = useState(0);
   const [stats, setStats] = useState({
     total: 0,
     pending: 0,
@@ -48,9 +49,10 @@ export default function AdminOrdersPage() {
     totalRevenue: 0,
   });
 
-  const calculateStats = useCallback((orderList: Order[]) => {
+  const calculateStats = useCallback((orderList: Order[], dbTotalCount: number) => {
     const newStats = {
-      total: orderList.length,
+      // Use the authoritative total from the DB, not just what was fetched
+      total: dbTotalCount,
       pending: 0,
       paid: 0,
       fulfilled: 0,
@@ -72,11 +74,16 @@ export default function AdminOrdersPage() {
   const fetchOrders = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/admin/orders");
+      // Request the maximum allowed (100) so that filtering and pagination
+      // cover as many orders as possible in one fetch.
+      const response = await fetch("/api/admin/orders?limit=100");
       if (!response.ok) throw new Error("Failed to fetch orders");
       const data = await response.json();
-      setOrders(data.orders || []);
-      calculateStats(data.orders || []);
+      const fetched = data.orders || [];
+      const dbTotal = data.totalCount ?? fetched.length;
+      setOrders(fetched);
+      setTotalOrderCount(dbTotal);
+      calculateStats(fetched, dbTotal);
     } catch (err) {
       console.error("Error fetching orders:", err);
     } finally {
@@ -307,6 +314,13 @@ export default function AdminOrdersPage() {
             </button>
           </div>
         </div>
+
+        {/* Warning: more orders exist than are loaded */}
+        {totalOrderCount > orders.length && (
+          <div className="mb-4 px-4 py-3 border border-primary/30 bg-primary/5 rounded-xl text-sm text-primary">
+            Showing {orders.length} of {totalOrderCount} total orders. Filters and revenue stats reflect loaded orders only. Export to CSV for a full picture.
+          </div>
+        )}
 
         {/* Table */}
         <div className="bg-card border border-border rounded-xl overflow-x-auto">
