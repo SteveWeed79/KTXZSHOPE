@@ -1,14 +1,25 @@
 /**
  * ============================================================================
  * FILE: lib/rateLimit.ts
- * STATUS: NEW FILE
  * ============================================================================
- * 
- * Simple Rate Limiting (In-Memory)
- * For production with multiple servers, use Redis
+ *
+ * Rate limiting — uses Upstash Redis in production so all serverless
+ * instances share a single counter, falling back to an in-memory Map for
+ * local development when the Upstash env vars are absent.
+ *
+ * To enable Redis: set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN
+ * (available from console.upstash.com after creating a Redis database).
+ * Without those variables the in-memory fallback is used — counts are
+ * per-instance and reset on every cold start, which is fine for local dev
+ * but provides no real protection across multiple Vercel instances.
  */
 
-const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
+import { Redis } from "@upstash/redis";
+import { Ratelimit } from "@upstash/ratelimit";
+
+// ---------------------------------------------------------------------------
+// IP extraction helpers (unchanged from original)
+// ---------------------------------------------------------------------------
 
 /**
  * Simple IPv4/IPv6 format validation — rejects obviously malformed values.
@@ -57,7 +68,6 @@ function extractIp(headerGetter: { get: (name: string) => string | null }): stri
   const forwarded = headerGetter.get("x-forwarded-for");
   if (forwarded) {
     const parts = forwarded.split(",").map((s) => s.trim()).filter(Boolean);
-    // Use rightmost IP — it's the one added by the outermost trusted proxy
     for (let i = parts.length - 1; i >= 0; i--) {
       if (looksLikeIp(parts[i])) return parts[i];
     }
@@ -74,6 +84,50 @@ function getIdentifierFromHeaders(headerStore: { get: (name: string) => string |
   return extractIp(headerStore);
 }
 
+// ---------------------------------------------------------------------------
+// Backend selection
+// ---------------------------------------------------------------------------
+
+const UPSTASH_URL = process.env.UPSTASH_REDIS_REST_URL;
+const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+// Initialize Redis client once at module load — null when env vars are absent
+const redis: Redis | null =
+  UPSTASH_URL && UPSTASH_TOKEN
+    ? new Redis({ url: UPSTASH_URL, token: UPSTASH_TOKEN })
+    : null;
+
+if (!redis && process.env.NODE_ENV === "production") {
+  console.warn(
+    "⚠️  Rate limiting: UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN not set. " +
+    "In-memory fallback active — counts are per-instance and not shared across serverless workers."
+  );
+}
+
+// Cache Upstash Ratelimit instances keyed by "prefix:limit" so we don't
+// recreate them on every request (each instance is stateless but non-trivial to construct).
+const upstashCache = new Map<string, Ratelimit>();
+
+function getUpstashLimiter(prefix: string, limit: number): Ratelimit {
+  const cacheKey = `${prefix}:${limit}`;
+  let limiter = upstashCache.get(cacheKey);
+  if (!limiter) {
+    limiter = new Ratelimit({
+      redis: redis!,
+      limiter: Ratelimit.slidingWindow(limit, "60 s"),
+      prefix: `ratelimit:${prefix}`,
+    });
+    upstashCache.set(cacheKey, limiter);
+  }
+  return limiter;
+}
+
+// ---------------------------------------------------------------------------
+// In-memory fallback
+// ---------------------------------------------------------------------------
+
+const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
+
 function cleanupOldEntries(now: number) {
   for (const [key, value] of rateLimitStore.entries()) {
     if (now > value.resetTime) {
@@ -82,54 +136,63 @@ function cleanupOldEntries(now: number) {
   }
 }
 
-export function rateLimit(options: { interval: number; uniqueTokenPerInterval: number }) {
-  const { interval, uniqueTokenPerInterval } = options;
+function inMemoryCheck(
+  key: string,
+  limit: number,
+  intervalMs = 60_000
+): { success: boolean; limit: number; remaining: number; reset: number } {
+  const now = Date.now();
+
+  if (Math.random() < 0.01) cleanupOldEntries(now);
+
+  let tokenData = rateLimitStore.get(key);
+  if (!tokenData || now > tokenData.resetTime) {
+    tokenData = { count: 0, resetTime: now + intervalMs };
+    rateLimitStore.set(key, tokenData);
+  }
+  tokenData.count++;
 
   return {
-    check: async (request: Request, limit: number) => {
+    success: tokenData.count <= limit,
+    limit,
+    remaining: Math.max(0, limit - tokenData.count),
+    reset: tokenData.resetTime,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Public API — identical surface to the original so all callers are unchanged
+// ---------------------------------------------------------------------------
+
+type RateLimitResult = { success: boolean; limit: number; remaining: number; reset: number };
+
+function makeLimiter(prefix: string) {
+  return {
+    check: async (request: Request, limit: number): Promise<RateLimitResult> => {
       const identifier = getIdentifier(request);
-      const now = Date.now();
-      
-      if (Math.random() < 0.01) {
-        cleanupOldEntries(now);
+      const key = `${prefix}:${identifier}`;
+
+      if (redis) {
+        const limiter = getUpstashLimiter(prefix, limit);
+        const { success, limit: l, remaining, reset } = await limiter.limit(key);
+        // Upstash reset is ms since epoch — same unit as in-memory fallback
+        return { success, limit: l, remaining, reset };
       }
-      
-      let tokenData = rateLimitStore.get(identifier);
-      
-      if (!tokenData && rateLimitStore.size >= uniqueTokenPerInterval) {
-        const oldestKey = rateLimitStore.keys().next().value;
-        if (oldestKey) rateLimitStore.delete(oldestKey);
-      }
-      
-      if (!tokenData || now > tokenData.resetTime) {
-        tokenData = {
-          count: 0,
-          resetTime: now + interval,
-        };
-        rateLimitStore.set(identifier, tokenData);
-      }
-      
-      tokenData.count++;
-      
-      return {
-        success: tokenData.count <= limit,
-        limit,
-        remaining: Math.max(0, limit - tokenData.count),
-        reset: tokenData.resetTime,
-      };
+
+      return inMemoryCheck(key, limit);
     },
   };
 }
 
 export const RateLimiters = {
-  strict: rateLimit({ interval: 60 * 1000, uniqueTokenPerInterval: 500 }),
-  standard: rateLimit({ interval: 60 * 1000, uniqueTokenPerInterval: 500 }),
-  generous: rateLimit({ interval: 60 * 1000, uniqueTokenPerInterval: 500 }),
-  auth: rateLimit({ interval: 60 * 1000, uniqueTokenPerInterval: 500 }),
+  strict:   makeLimiter("strict"),
+  standard: makeLimiter("standard"),
+  generous: makeLimiter("generous"),
+  auth:     makeLimiter("auth"),
 };
 
 /**
- * Rate-limit check for server actions using next/headers.
+ * Rate-limit check for Next.js server actions (reads IP from next/headers).
  * Returns { success, remaining } — caller decides how to handle failure.
  */
 export async function checkActionRateLimit(
@@ -137,26 +200,24 @@ export async function checkActionRateLimit(
   limit: number,
   actionName: string
 ): Promise<{ success: boolean; remaining: number }> {
+  // limiterKey is accepted for API compatibility but the window (60 s) is
+  // uniform across all limiters — the actionName is used as the Redis prefix
+  // so each action has its own independent counter.
+  void limiterKey;
+
   const { headers } = await import("next/headers");
   const headerStore = await headers();
   const identifier = getIdentifierFromHeaders(headerStore);
   const key = `${actionName}:${identifier}`;
 
-  // Use a namespaced key to avoid collision across different actions
-  const now = Date.now();
-
-  // Direct store access for namespaced key
-  let tokenData = rateLimitStore.get(key);
-  if (!tokenData || now > tokenData.resetTime) {
-    tokenData = { count: 0, resetTime: now + 60_000 };
-    rateLimitStore.set(key, tokenData);
+  if (redis) {
+    const limiter = getUpstashLimiter(actionName, limit);
+    const { success, remaining } = await limiter.limit(key);
+    return { success, remaining };
   }
-  tokenData.count++;
 
-  return {
-    success: tokenData.count <= limit,
-    remaining: Math.max(0, limit - tokenData.count),
-  };
+  const result = inMemoryCheck(key, limit);
+  return { success: result.success, remaining: result.remaining };
 }
 
 export function rateLimitResponse(result: { limit: number; remaining: number; reset: number }) {
