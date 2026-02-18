@@ -39,8 +39,8 @@ interface OrderData {
   createdAt: string;
 }
 
-function formatPrice(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`;
+function formatPrice(dollars: number): string {
+  return `$${dollars.toFixed(2)}`;
 }
 
 export function generateOrderConfirmationEmail(order: OrderData, siteUrl: string) {

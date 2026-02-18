@@ -4,7 +4,7 @@
  * Process a Stripe refund for an order.
  * - Full refund by default
  * - Optional partial refund via `amount` param (in dollars)
- * - Updates order status to "refunded"
+ * - Updates order status to "refunded" on full refunds only (partial refunds leave status unchanged)
  * - Restores inventory for cancelled stock
  * - Requires step-up authentication (password re-confirmation)
  * - Rate limited: 10 req/min
@@ -100,10 +100,14 @@ export async function POST(req: NextRequest) {
     // Determine if full or partial refund
     const isFullRefund = !amount || toCents(amount) >= toCents(order.amounts?.total || 0);
 
-    // Update order
+    // Update order — only change status to "refunded" on a full refund.
+    // Partial refunds leave the order in its current status (paid/fulfilled)
+    // because the order still needs to be fulfilled and tracked.
     const previousStatus = order.status;
-    order.status = "refunded";
-    order.refundedAt = new Date();
+    if (isFullRefund) {
+      order.status = "refunded";
+      order.refundedAt = new Date();
+    }
     order.notes = `${order.notes || ""}\nRefund processed: ${refund.id} (${isFullRefund ? "full" : `partial: $${amount}`}) — ${new Date().toISOString()}`.trim();
     await order.save();
 
