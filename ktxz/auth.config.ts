@@ -10,6 +10,14 @@ export const authConfig = {
     authorized() {
       return true;
     },
+    // Forward role from the JWT token into the session so that proxy.ts
+    // can read req.auth.user.role without a DB round-trip on every request.
+    session({ session, token }) {
+      if (session.user && token.role) {
+        (session.user as unknown as Record<string, unknown>).role = token.role;
+      }
+      return session;
+    },
   },
   providers: [],
 } satisfies NextAuthConfig;
