@@ -126,6 +126,10 @@ const OrderSchema = new Schema(
     emailError: { type: String, default: "" },
     // Tracks when the shipping notification was sent to prevent duplicate sends
     shippingEmailSentAt: { type: Date },
+
+    // Shippo shipping label (populated when a label is purchased via Shippo API)
+    shippoTransactionId: { type: String, default: "" },
+    labelUrl: { type: String, default: "" },
   },
   { timestamps: true }
 );
