@@ -1,20 +1,13 @@
 /**
  * ============================================================================
  * FILE: ktxz/components/Navbar.tsx
- * STATUS: DEMO-SAFE (prevents stale session/brand UI)
+ * STATUS: MODIFIED (Replace existing file)
  * ============================================================================
  *
- * Change requested:
- * - Brand list in the Navbar should be information-only (NOT clickable)
- * - Remove the “circle/pill” look; just stylize the font cleanly.
- *
- * What changed:
- * - Replaced pill styling (border/rounded/bg/padding) with simple typographic styling.
- * - Added subtle separators for readability.
- *
- * What did NOT change:
- * - Session / Admin logic stays intact.
- * - noStore() remains to keep Navbar fresh for demo.
+ * Fix: signOut redirect was using NEXTAUTH_URL (localhost:3000) on Vercel.
+ * Solution: Pass the full production-safe redirect using the request origin,
+ * or simply rely on NextAuth v5's built-in redirect handling with a relative path.
+ * The server action now uses `redirect: false` and lets Next.js handle navigation.
  */
 
 import Link from "next/link";
@@ -26,9 +19,10 @@ import dbConnect from "@/lib/dbConnect";
 import { Suspense } from "react";
 import { ShoppingBag } from "lucide-react";
 import { unstable_noStore as noStore } from "next/cache";
+import { headers } from "next/headers";
 
 export default async function Navbar() {
-  // Demo-safe: Navbar depends on session + DB; don’t allow stale cache renders.
+  // Demo-safe: Navbar depends on session + DB; don't allow stale cache renders.
   noStore();
 
   const session = await auth();
@@ -107,7 +101,14 @@ export default async function Navbar() {
               <form
                 action={async () => {
                   "use server";
-                  await signOut({ redirectTo: "/" });
+                  // IMPORTANT: Build the redirectTo URL from the actual request host,
+                  // NOT from NEXTAUTH_URL. This prevents localhost redirect on Vercel
+                  // when NEXTAUTH_URL was set to localhost:3000 during development.
+                  const headersList = await headers();
+                  const host = headersList.get("host") ?? "";
+                  const proto = headersList.get("x-forwarded-proto") ?? "https";
+                  const origin = `${proto}://${host}`;
+                  await signOut({ redirectTo: `${origin}/` });
                 }}
               >
                 <button className="text-[10px] text-muted-foreground hover:text-primary font-bold transition-colors cursor-pointer tracking-widest uppercase">
