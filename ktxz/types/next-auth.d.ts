@@ -16,5 +16,7 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT {
     role?: string;
+    /** Unix ms timestamp of the last DB role hydration — used for TTL re-check */
+    roleHydratedAt?: number;
   }
 }

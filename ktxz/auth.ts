@@ -95,14 +95,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     /**
      * JWT is the source of truth for proxy authorization.
-     * We ensure token.id + token.role ALWAYS come from MongoDB by email.
+     *
+     * DB hydration strategy (avoids a MongoDB query on every request):
+     *   - Always hydrate on login events (user or account present).
+     *   - On subsequent requests, re-hydrate only when roleHydratedAt is
+     *     older than ROLE_TTL_MS (5 min), so role changes propagate quickly
+     *     without a round-trip to MongoDB on every authenticated request.
      */
     async jwt({ token, user, account }) {
-      const email = normalizeEmail(user?.email ?? token.email);
+      const ROLE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
+      const email = normalizeEmail(user?.email ?? token.email);
       if (email) token.email = email;
 
-      // On first login, ensure an OAuth user exists in DB.
+      // Track whether we already hit the DB in this callback invocation so
+      // we don't issue a second query for OAuth logins.
+      let hydratedThisCall = false;
+
+      // On OAuth login: find-or-create the user record in MongoDB.
       if (account?.provider === "google" && email) {
         try {
           const dbUser = await findOrCreateOAuthUser({
@@ -113,31 +123,36 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
           token.id = dbUser._id.toString();
           token.role = dbUser.role === "admin" ? "admin" : "customer";
+          token.roleHydratedAt = Date.now();
+          hydratedThisCall = true;
         } catch (err) {
           console.error("OAuth DB hydrate error:", err);
           token.role = "customer";
         }
       }
 
-      // For credentials login, user.id/role will exist, but we still re-hydrate from DB
-      // to guarantee consistency (and to catch role changes).
-      if (email) {
+      // For credentials logins and periodic TTL re-checks: hydrate role + id
+      // from MongoDB. Skipped when the OAuth block already ran this invocation.
+      const isLoginEvent = !!(user || account);
+      const isStale =
+        !token.roleHydratedAt ||
+        Date.now() - token.roleHydratedAt > ROLE_TTL_MS;
+
+      if (email && !hydratedThisCall && (isLoginEvent || isStale)) {
         try {
           const dbUser = await findUserByEmail(email);
           if (dbUser?._id) token.id = dbUser._id.toString();
           token.role = dbUser?.role === "admin" ? "admin" : "customer";
+          token.roleHydratedAt = Date.now();
         } catch (err) {
           console.error("DB hydrate error:", err);
-          // keep existing token.role if present
           if (token.role !== "admin" && token.role !== "customer") token.role = "customer";
         }
       }
 
       // Merge cookie cart into user cart ONCE per login event.
-      // We treat "user present" as a login event.
       if (user && typeof token.id === "string" && token.id.length > 0) {
         try {
-          // avoid repeat work if NextAuth calls jwt multiple times in a single flow
           if (!(token as Record<string, unknown>).cartMerged) {
             await mergeCookieCartIntoUserCart(token.id);
             (token as Record<string, unknown>).cartMerged = true;
