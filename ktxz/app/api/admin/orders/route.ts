@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/requireAdmin";
 import dbConnect from "@/lib/dbConnect";
 import Order from "@/models/Order";
+import "@/models/Card"; // ensure Card model is registered for populate
 import { errorResponse } from "@/lib/apiResponse";
 
 const MAX_LIMIT = 100;

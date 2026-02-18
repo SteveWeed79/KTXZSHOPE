@@ -139,7 +139,7 @@ export default function AdminOrdersPage() {
           order.email,
           order.status,
           order.items.length,
-          `$${(order.amounts.total / 100).toFixed(2)}`,
+          `$${order.amounts.total.toFixed(2)}`,
         ].join(",")
       ),
     ].join("\n");
@@ -217,7 +217,7 @@ export default function AdminOrdersPage() {
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Revenue</p>
                 <p className="text-2xl font-bold text-primary">
-                  ${(stats.totalRevenue / 100).toFixed(2)}
+                  ${stats.totalRevenue.toFixed(2)}
                 </p>
               </div>
               <DollarSign className="h-5 w-5 text-primary" />
@@ -368,7 +368,7 @@ export default function AdminOrdersPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-semibold">
-                        ${(order.amounts.total / 100).toFixed(2)}
+                        ${order.amounts.total.toFixed(2)}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

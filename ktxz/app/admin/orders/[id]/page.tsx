@@ -217,17 +217,17 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                       <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold">${(item.unitPrice / 100).toFixed(2)}</p>
-                      <p className="text-sm text-muted-foreground">${((item.unitPrice * item.quantity) / 100).toFixed(2)}</p>
+                      <p className="font-semibold">${item.unitPrice.toFixed(2)}</p>
+                      <p className="text-sm text-muted-foreground">${(item.unitPrice * item.quantity).toFixed(2)}</p>
                     </div>
                   </div>
                 ))}
               </div>
               <div className="mt-6 pt-6 border-t border-border space-y-2">
-                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span>${(order.amounts.subtotal / 100).toFixed(2)}</span></div>
-                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Shipping</span><span>${(order.amounts.shipping / 100).toFixed(2)}</span></div>
-                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Tax</span><span>${(order.amounts.tax / 100).toFixed(2)}</span></div>
-                <div className="flex justify-between text-lg font-bold pt-2 border-t border-border"><span>Total</span><span>${(order.amounts.total / 100).toFixed(2)}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span>${order.amounts.subtotal.toFixed(2)}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Shipping</span><span>${order.amounts.shipping.toFixed(2)}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Tax</span><span>${order.amounts.tax.toFixed(2)}</span></div>
+                <div className="flex justify-between text-lg font-bold pt-2 border-t border-border"><span>Total</span><span>${order.amounts.total.toFixed(2)}</span></div>
               </div>
             </div>
 
