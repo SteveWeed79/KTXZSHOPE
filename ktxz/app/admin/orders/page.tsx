@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Download, Package, Clock, CreditCard, DollarSign } from "lucide-react";
 import { getStatusColor } from "@/lib/formatters";
@@ -25,12 +26,20 @@ interface Order {
 
 type StatusFilter = "all" | "pending" | "paid" | "fulfilled" | "cancelled" | "refunded";
 
+const VALID_STATUSES: StatusFilter[] = ["all", "pending", "paid", "fulfilled", "cancelled", "refunded"];
+
 export default function AdminOrdersPage() {
+  const searchParams = useSearchParams();
   const [orders, setOrders] = useState<Order[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  // Initialise filter from the URL query param so that links like
+  // /admin/orders?status=paid (from the dashboard "Pending" card) work correctly.
+  const urlStatus = searchParams.get("status") as StatusFilter | null;
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(
+    urlStatus && VALID_STATUSES.includes(urlStatus) ? urlStatus : "all"
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -257,8 +266,8 @@ export default function AdminOrdersPage() {
                 className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm text-foreground focus:ring-1 focus:ring-primary focus:border-primary transition-all"
               >
                 <option value="all">All Statuses</option>
-                <option value="pending">Pending</option>
-                <option value="paid">Paid</option>
+                <option value="pending">Pending (awaiting payment)</option>
+                <option value="paid">Paid (to fulfil)</option>
                 <option value="fulfilled">Fulfilled</option>
                 <option value="cancelled">Cancelled</option>
                 <option value="refunded">Refunded</option>
