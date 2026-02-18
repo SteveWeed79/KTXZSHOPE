@@ -13,6 +13,7 @@ import Card from "@/models/Card";
 import Order from "@/models/Order";
 import AdminSection from "@/components/AdminSection";
 import VaultAutoRefresh from "@/components/VaultAutoRefresh";
+import ImageUploader from "@/components/ImageUploader";
 import Image from "next/image";
 import Link from "next/link";
 import { Package, Clock, CheckCircle } from "lucide-react";
@@ -269,11 +270,7 @@ export default async function AdminPage() {
                 </option>
               ))}
             </select>
-            <input
-              name="image"
-              placeholder="Image URL"
-              className="w-full bg-background border border-border p-4 rounded-xl text-foreground outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
-            />
+            <ImageUploader name="image" className="w-full" />
             <button className="w-full btn-primary py-4 text-sm">
               Push to Live Inventory
             </button>
@@ -454,12 +451,12 @@ export default async function AdminPage() {
 
                     <div className="lg:col-span-3 space-y-1">
                       <label className="text-[8px] text-muted-foreground uppercase font-mono ml-1">
-                        Image URL
+                        Image
                       </label>
-                      <input
+                      <ImageUploader
                         name="image"
                         defaultValue={card.image || ""}
-                        className="w-full bg-muted/30 border border-border p-2 rounded-lg text-[10px] text-muted-foreground outline-none focus:ring-1 focus:ring-primary"
+                        className="w-full"
                       />
                     </div>
                   </div>
