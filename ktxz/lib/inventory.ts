@@ -20,9 +20,9 @@ export async function restoreInventory(
 
     if (bulkResult) continue;
 
-    // Single: restore to 1
+    // Single: restore to 1 (guard inventoryType so we never overwrite a bulk card)
     await Card.findOneAndUpdate(
-      { _id: item.card },
+      { _id: item.card, inventoryType: "single" },
       { $set: { stock: 1, status: "active", isActive: true } }
     );
   }

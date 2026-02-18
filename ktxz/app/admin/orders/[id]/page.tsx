@@ -35,6 +35,8 @@ interface Order {
   createdAt: string;
   paidAt?: string;
   fulfilledAt?: string;
+  cancelledAt?: string;
+  refundedAt?: string;
 }
 
 const inputClass =
@@ -53,6 +55,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const [refundType, setRefundType] = useState<"full" | "partial">("full");
   const [refundAmount, setRefundAmount] = useState("");
   const [refundReason, setRefundReason] = useState("");
+  const [refundPassword, setRefundPassword] = useState("");
   const [refunding, setRefunding] = useState(false);
 
   const fetchOrder = useCallback(async () => {
@@ -133,6 +136,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
     const isPartial = refundType === "partial";
     const amt = isPartial ? parseFloat(refundAmount) : null;
     if (isPartial && (!amt || amt <= 0)) { alert("Please enter a valid refund amount"); return; }
+    if (!refundPassword) { alert("Please enter your password to confirm this refund."); return; }
     const confirmMsg = isPartial ? `Process a partial refund of $${amt?.toFixed(2)}?` : "Process a FULL refund for this order?";
     if (!confirm(confirmMsg)) return;
     try {
@@ -140,12 +144,13 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       const response = await fetch("/api/admin/orders/refund", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId: id, amount: isPartial ? amt : undefined, reason: refundReason || undefined }),
+        body: JSON.stringify({ orderId: id, amount: isPartial ? amt : undefined, reason: refundReason || undefined, confirmPassword: refundPassword }),
       });
       const data = await response.json();
       if (!response.ok) { alert(data.error || "Failed to process refund"); return; }
       alert(data.message);
       setShowRefundForm(false);
+      setRefundPassword("");
       await fetchOrder();
     } catch (err) {
       console.error("Error processing refund:", err);
@@ -305,7 +310,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                 {order.status !== "cancelled" && order.status !== "refunded" && (
                   <button onClick={() => updateStatus("cancelled")} disabled={updating} className="w-full py-2 bg-muted text-foreground border border-border rounded-lg hover:bg-muted/80 font-medium">Cancel Order</button>
                 )}
-                {order.status !== "refunded" && order.status !== "pending" && (
+                {order.status !== "refunded" && order.status !== "pending" && order.status !== "cancelled" && (
                   <button onClick={() => setShowRefundForm(!showRefundForm)} disabled={refunding} className="w-full py-2 bg-primary text-primary-foreground rounded-lg hover:brightness-90 font-medium">Refund Order</button>
                 )}
               </div>
@@ -342,11 +347,16 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                       <option value="fraudulent">Fraudulent</option>
                     </select>
                   </div>
+                  <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1">Your Password <span className="text-primary">*</span></label>
+                    <input type="password" value={refundPassword} onChange={(e) => setRefundPassword(e.target.value)} className={inputClass} placeholder="Re-enter your password to confirm" autoComplete="current-password" />
+                    <p className="text-xs text-muted-foreground mt-1">Required to authorise this refund.</p>
+                  </div>
                   <div className="flex gap-2">
                     <button onClick={processRefund} disabled={refunding} className="flex-1 py-2 bg-primary text-primary-foreground rounded-lg hover:brightness-90 font-medium disabled:opacity-50">
                       {refunding ? "Processing..." : "Confirm Refund"}
                     </button>
-                    <button onClick={() => setShowRefundForm(false)} className="px-4 py-2 bg-muted text-foreground rounded-lg hover:bg-muted/80">Cancel</button>
+                    <button onClick={() => { setShowRefundForm(false); setRefundPassword(""); }} className="px-4 py-2 bg-muted text-foreground rounded-lg hover:bg-muted/80">Cancel</button>
                   </div>
                 </div>
               </div>
@@ -359,7 +369,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                 <button onClick={() => sendEmail("confirmation")} className="w-full py-2 border border-border rounded-lg hover:bg-muted transition-colors font-medium flex items-center justify-center gap-2">
                   <Mail className="h-4 w-4" /> Send Confirmation
                 </button>
-                <button onClick={() => sendEmail("shipping")} disabled={!trackingNumber} className="w-full py-2 border border-border rounded-lg hover:bg-muted transition-colors font-medium flex items-center justify-center gap-2 disabled:opacity-50">
+                <button onClick={() => sendEmail("shipping")} disabled={!order.trackingNumber} className="w-full py-2 border border-border rounded-lg hover:bg-muted transition-colors font-medium flex items-center justify-center gap-2 disabled:opacity-50" title={!order.trackingNumber ? "Save tracking info first" : undefined}>
                   <Send className="h-4 w-4" /> Send Shipping Notice
                 </button>
               </div>
@@ -391,6 +401,24 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                     <div>
                       <p className="text-sm font-medium">Order Fulfilled</p>
                       <p className="text-xs text-muted-foreground">{new Date(order.fulfilledAt).toLocaleString()}</p>
+                    </div>
+                  </div>
+                )}
+                {order.cancelledAt && (
+                  <div className="flex items-start gap-3">
+                    <div className="w-2 h-2 mt-2 rounded-full bg-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Order Cancelled</p>
+                      <p className="text-xs text-muted-foreground">{new Date(order.cancelledAt).toLocaleString()}</p>
+                    </div>
+                  </div>
+                )}
+                {order.refundedAt && (
+                  <div className="flex items-start gap-3">
+                    <div className="w-2 h-2 mt-2 rounded-full bg-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Refund Processed</p>
+                      <p className="text-xs text-muted-foreground">{new Date(order.refundedAt).toLocaleString()}</p>
                     </div>
                   </div>
                 )}

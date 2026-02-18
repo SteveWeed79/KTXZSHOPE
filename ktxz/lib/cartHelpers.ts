@@ -13,6 +13,7 @@
 import { cookies } from "next/headers";
 import mongoose from "mongoose";
 import Cart from "@/models/Cart";
+import Card from "@/models/Card";
 import dbConnect from "@/lib/dbConnect";
 import {
   getCartFromCookies,
@@ -22,6 +23,38 @@ import {
   clearCart as clearCookieCart,
 } from "@/lib/cartCookie";
 import Reservation from "@/models/Reservation";
+
+/**
+ * Restore stock for all items in a set of active reservations.
+ * Must be called BEFORE cancelling the reservations so the stock
+ * is correctly returned regardless of subsequent status changes.
+ */
+async function restoreStockForReservations(
+  reservations: Array<{
+    items?: Array<{ card: { toString(): string }; quantity?: number }>;
+  }>
+) {
+  for (const reservation of reservations) {
+    if (!reservation.items) continue;
+    for (const item of reservation.items) {
+      const cardId = item.card.toString();
+      const qty = item.quantity || 1;
+
+      // Single items: reserved → active
+      const singleResult = await Card.findOneAndUpdate(
+        { _id: cardId, inventoryType: "single", status: "reserved" },
+        { $set: { status: "active", isActive: true }, $inc: { stock: 1 } }
+      );
+      if (singleResult) continue;
+
+      // Bulk items: restore stock
+      await Card.findOneAndUpdate(
+        { _id: cardId, inventoryType: "bulk" },
+        { $inc: { stock: qty }, $set: { status: "active", isActive: true } }
+      );
+    }
+  }
+}
 
 export type CartItem = {
   cardId: string;
@@ -181,17 +214,29 @@ export async function removeFromCart(
 }
 
 /**
- * Clear entire cart and cancel any active reservations for the holder
+ * Clear entire cart and cancel any active reservations for the holder.
+ * Restores stock for any reservations that had already decremented inventory
+ * (i.e., the user started checkout then returned to the cart).
  */
 export async function clearCart(userId: string | null): Promise<void> {
   await dbConnect();
 
   if (userId) {
-    // Cancel active reservations for this user
-    await Reservation.updateMany(
-      { holderKey: userId, holderType: "user", status: "active" },
-      { $set: { status: "cancelled" } }
-    );
+    // Find active reservations before cancelling so we can restore their stock
+    const activeReservations = await Reservation.find({
+      holderKey: userId,
+      holderType: "user",
+      status: "active",
+    });
+
+    // Restore stock first, then cancel
+    if (activeReservations.length > 0) {
+      await restoreStockForReservations(activeReservations);
+      await Reservation.updateMany(
+        { holderKey: userId, holderType: "user", status: "active" },
+        { $set: { status: "cancelled" } }
+      );
+    }
 
     // Database cart
     const cart = await Cart.findOne({ user: userId });
@@ -205,12 +250,21 @@ export async function clearCart(userId: string | null): Promise<void> {
     const cookieStore = await cookies();
     const cart = getCartFromCookies(cookieStore);
 
-    // Cancel active reservations for this guest
+    // Find and restore stock for active guest reservations
     if (cart.id) {
-      await Reservation.updateMany(
-        { holderKey: cart.id, holderType: "guest", status: "active" },
-        { $set: { status: "cancelled" } }
-      );
+      const activeReservations = await Reservation.find({
+        holderKey: cart.id,
+        holderType: "guest",
+        status: "active",
+      });
+
+      if (activeReservations.length > 0) {
+        await restoreStockForReservations(activeReservations);
+        await Reservation.updateMany(
+          { holderKey: cart.id, holderType: "guest", status: "active" },
+          { $set: { status: "cancelled" } }
+        );
+      }
     }
 
     clearCookieCart(cart);

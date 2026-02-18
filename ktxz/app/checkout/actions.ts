@@ -227,11 +227,44 @@ export async function createCheckoutSession() {
     redirect("/cart?error=session-error");
   }
 
-  // Cancel any existing active reservations for this holder
-  await Reservation.updateMany(
-    { holderType, holderKey, status: "active" },
-    { $set: { status: "cancelled" } }
-  );
+  // Restore stock for any previous active reservations before cancelling them.
+  // This prevents a double-decrement for bulk items if the user restarts checkout
+  // (e.g., clicked back from Stripe and tries again). Stock was already decremented
+  // by the previous checkout attempt, so we must restore it before decrementing again.
+  const previousReservations = await Reservation.find({
+    holderType,
+    holderKey,
+    status: "active",
+  });
+
+  for (const prev of previousReservations) {
+    if (!prev.items) continue;
+    for (const item of prev.items) {
+      const cardId = item.card.toString();
+      const qty = item.quantity || 1;
+
+      // Single items: reserved → active (only if still reserved by this holder)
+      const singleResult = await Card.findOneAndUpdate(
+        { _id: cardId, inventoryType: "single", status: "reserved" },
+        { $set: { status: "active", isActive: true }, $inc: { stock: 1 } }
+      );
+      if (singleResult) continue;
+
+      // Bulk items: restore stock
+      await Card.findOneAndUpdate(
+        { _id: cardId, inventoryType: "bulk" },
+        { $inc: { stock: qty }, $set: { status: "active", isActive: true } }
+      );
+    }
+  }
+
+  // Now cancel the old reservations
+  if (previousReservations.length > 0) {
+    await Reservation.updateMany(
+      { holderType, holderKey, status: "active" },
+      { $set: { status: "cancelled" } }
+    );
+  }
 
   const reservation = await Reservation.create({
     holderType,

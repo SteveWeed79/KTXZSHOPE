@@ -121,7 +121,7 @@ export default async function AdminPage() {
             >
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-bold text-sm uppercase tracking-wider">
-                  Pending
+                  To Fulfill
                 </h3>
                 <Clock className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
               </div>
@@ -129,7 +129,7 @@ export default async function AdminPage() {
                 {pendingOrders}
               </span>
               <p className="text-xs text-muted-foreground mt-1">
-                Awaiting fulfillment
+                Paid — awaiting shipment
               </p>
             </Link>
 

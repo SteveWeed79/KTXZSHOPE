@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Download, Package, Clock, CreditCard, DollarSign } from "lucide-react";
 import { getStatusColor } from "@/lib/formatters";
@@ -25,12 +26,20 @@ interface Order {
 
 type StatusFilter = "all" | "pending" | "paid" | "fulfilled" | "cancelled" | "refunded";
 
+const VALID_STATUSES: StatusFilter[] = ["all", "pending", "paid", "fulfilled", "cancelled", "refunded"];
+
 export default function AdminOrdersPage() {
+  const searchParams = useSearchParams();
   const [orders, setOrders] = useState<Order[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  // Initialise filter from the URL query param so that links like
+  // /admin/orders?status=paid (from the dashboard "Pending" card) work correctly.
+  const urlStatus = searchParams.get("status") as StatusFilter | null;
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(
+    urlStatus && VALID_STATUSES.includes(urlStatus) ? urlStatus : "all"
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -38,6 +47,7 @@ export default function AdminOrdersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
 
+  const [totalOrderCount, setTotalOrderCount] = useState(0);
   const [stats, setStats] = useState({
     total: 0,
     pending: 0,
@@ -48,9 +58,10 @@ export default function AdminOrdersPage() {
     totalRevenue: 0,
   });
 
-  const calculateStats = useCallback((orderList: Order[]) => {
+  const calculateStats = useCallback((orderList: Order[], dbTotalCount: number) => {
     const newStats = {
-      total: orderList.length,
+      // Use the authoritative total from the DB, not just what was fetched
+      total: dbTotalCount,
       pending: 0,
       paid: 0,
       fulfilled: 0,
@@ -72,11 +83,16 @@ export default function AdminOrdersPage() {
   const fetchOrders = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/admin/orders");
+      // Request the maximum allowed (100) so that filtering and pagination
+      // cover as many orders as possible in one fetch.
+      const response = await fetch("/api/admin/orders?limit=100");
       if (!response.ok) throw new Error("Failed to fetch orders");
       const data = await response.json();
-      setOrders(data.orders || []);
-      calculateStats(data.orders || []);
+      const fetched = data.orders || [];
+      const dbTotal = data.totalCount ?? fetched.length;
+      setOrders(fetched);
+      setTotalOrderCount(dbTotal);
+      calculateStats(fetched, dbTotal);
     } catch (err) {
       console.error("Error fetching orders:", err);
     } finally {
@@ -250,8 +266,8 @@ export default function AdminOrdersPage() {
                 className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm text-foreground focus:ring-1 focus:ring-primary focus:border-primary transition-all"
               >
                 <option value="all">All Statuses</option>
-                <option value="pending">Pending</option>
-                <option value="paid">Paid</option>
+                <option value="pending">Pending (awaiting payment)</option>
+                <option value="paid">Paid (to fulfil)</option>
                 <option value="fulfilled">Fulfilled</option>
                 <option value="cancelled">Cancelled</option>
                 <option value="refunded">Refunded</option>
@@ -307,6 +323,13 @@ export default function AdminOrdersPage() {
             </button>
           </div>
         </div>
+
+        {/* Warning: more orders exist than are loaded */}
+        {totalOrderCount > orders.length && (
+          <div className="mb-4 px-4 py-3 border border-primary/30 bg-primary/5 rounded-xl text-sm text-primary">
+            Showing {orders.length} of {totalOrderCount} total orders. Filters and revenue stats reflect loaded orders only. Export to CSV for a full picture.
+          </div>
+        )}
 
         {/* Table */}
         <div className="bg-card border border-border rounded-xl overflow-x-auto">
