@@ -24,9 +24,26 @@ async function dbConnect() {
       bufferCommands: false,
     };
 
-    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
+    cached.promise = mongoose.connect(MONGODB_URI, opts).then(async (mongooseInstance) => {
       console.log('✅ MongoDB Connected Successfully');
-      return mongoose;
+
+      // Ensure stripe_events records expire automatically after 30 days.
+      // Without this index, idempotency records accumulate forever.
+      // createIndex is idempotent — safe to run on every cold start.
+      try {
+        await mongooseInstance.connection
+          .collection('stripe_events')
+          .createIndex(
+            { claimedAt: 1 },
+            { expireAfterSeconds: 30 * 24 * 60 * 60, background: true }
+          );
+      } catch (err) {
+        // Non-fatal: log and continue. Common causes: index already exists
+        // with a different TTL value (requires manual drop + recreate).
+        console.warn('⚠️  stripe_events TTL index skipped:', (err as Error)?.message);
+      }
+
+      return mongooseInstance;
     });
   }
 
