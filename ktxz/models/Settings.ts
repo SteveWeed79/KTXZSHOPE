@@ -9,6 +9,7 @@ interface ISettings {
   isVaultLive: boolean;
   dropCountdown?: Date;
   maintenanceMode: boolean;
+  taxEnabled: boolean;
 }
 
 interface ISettingsModel extends Model<ISettings> {
@@ -25,6 +26,7 @@ const SettingsSchema = new Schema(
     isVaultLive: { type: Boolean, default: false },
     dropCountdown: { type: Date },
     maintenanceMode: { type: Boolean, default: false },
+    taxEnabled: { type: Boolean, default: true },
   },
   { timestamps: true }
 );
