@@ -1,25 +1,38 @@
-// ktxz/proxy.ts
-import type { NextRequest } from "next/server";
+/**
+ * ============================================================================
+ * FILE: ktxz/proxy.ts
+ * STATUS: MODIFIED (Replace existing file)
+ * ============================================================================
+ *
+ * Fix: getToken() from next-auth/jwt cannot read the NextAuth v5 session cookie.
+ * On HTTPS (Vercel) v5 names it __Secure-authjs.session-token — getToken() looks
+ * for the old v4 name and always returns null, causing every protected route to
+ * redirect to login even when the user is authenticated.
+ *
+ * Fix: use NextAuth(authConfig) directly in the proxy — the Auth.js v5 recommended
+ * pattern. authConfig has no DB/bcrypt imports so it's safe for the Edge runtime.
+ * req.auth is populated correctly in all environments.
+ */
+
+import NextAuth from "next-auth";
+import { authConfig } from "./auth.config";
 import { NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
+import type { NextAuthRequest } from "next-auth";
 
-function secret() {
-  // v5 commonly uses AUTH_SECRET; your repo also references NEXTAUTH_SECRET in env validation.
-  return process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET ?? "";
-}
+// Lightweight NextAuth instance — authConfig only, no DB deps, Edge-safe.
+const { auth } = NextAuth(authConfig);
 
-export async function proxy(req: NextRequest) {
+export const proxy = auth(function middleware(req: NextAuthRequest) {
   const { pathname } = req.nextUrl;
 
   const isAdminRoute = pathname.startsWith("/admin");
   const isProfileRoute = pathname.startsWith("/profile");
 
-  // Everything else is public
   if (!isAdminRoute && !isProfileRoute) return NextResponse.next();
 
-  const token = await getToken({ req, secret: secret() });
+  const session = req.auth;
 
-  if (!token) {
+  if (!session?.user) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("next", pathname);
@@ -28,10 +41,13 @@ export async function proxy(req: NextRequest) {
 
   if (isProfileRoute) return NextResponse.next();
 
-  // /admin/*
-  const role = typeof (token as Record<string, unknown>).role === "string" ? (token as Record<string, unknown>).role as string : undefined;
+  // /admin/* — check role or ADMIN_EMAIL
+  const user = session.user as { email?: string | null; role?: string };
+  const isAdmin =
+    user.role === "admin" ||
+    (!!user.email && user.email === process.env.ADMIN_EMAIL);
 
-  if (role !== "admin") {
+  if (!isAdmin) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("next", pathname);
@@ -39,7 +55,7 @@ export async function proxy(req: NextRequest) {
   }
 
   return NextResponse.next();
-}
+});
 
 export const config = {
   matcher: ["/admin/:path*", "/profile/:path*"],

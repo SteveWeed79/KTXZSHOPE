@@ -136,7 +136,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       const isLoginEvent = !!(user || account);
       const isStale =
         !token.roleHydratedAt ||
-        Date.now() - token.roleHydratedAt > ROLE_TTL_MS;
+        Date.now() - (token.roleHydratedAt as number) > ROLE_TTL_MS;
 
       if (email && !hydratedThisCall && (isLoginEvent || isStale)) {
         try {
