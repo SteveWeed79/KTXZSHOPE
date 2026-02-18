@@ -9,7 +9,8 @@ export type AuditAction =
   | "USER_CREATED"
   | "USER_ROLE_CHANGED"
   | "SETTINGS_UPDATED"
-  | "INVENTORY_RESTORED";
+  | "INVENTORY_RESTORED"
+  | "SHIPPING_LABEL_PURCHASED";
 
 export type AuditTargetType = "order" | "user" | "settings" | "card";
 

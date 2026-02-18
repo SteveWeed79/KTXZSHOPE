@@ -3,8 +3,15 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
+      // Google OAuth user avatars
+      { protocol: "https", hostname: "lh3.googleusercontent.com" },
+      // Seed / dev placeholder images
+      { protocol: "https", hostname: "picsum.photos" },
+      // TODO: Replace with your CDN hostname once an upload provider is
+      // configured (e.g. res.cloudinary.com, utfs.io, etc.).
+      // The wildcard is required until then because card image URLs are
+      // admin-entered and can point to arbitrary HTTPS hosts.
       { protocol: "https", hostname: "**" },
-      { protocol: "http", hostname: "**" },
     ],
   },
   async headers() {
@@ -27,7 +34,9 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://accounts.google.com",
+              // 'unsafe-eval' removed — Stripe.js v3 does not require it.
+              // If a future dependency reintroduces it, document the reason here.
+              "script-src 'self' 'unsafe-inline' https://js.stripe.com https://accounts.google.com",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https: blob:",
               "font-src 'self'",
@@ -45,3 +54,4 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
+
